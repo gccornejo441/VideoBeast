@@ -1,10 +1,12 @@
 ﻿// MainWindow.xaml.cs
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
 using Microsoft.UI;
+using Microsoft.UI.Text;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -31,6 +33,9 @@ public sealed partial class MainWindow : Window
     private StorageFolder? _libraryFolder;
     private StorageFolder? _selectedFolder;
     private StorageFile? _selectedFile;
+
+    // Track what is currently playing so context-menu delete/rename doesn't stop unrelated playback
+    private string? _playingFilePath;
 
     // Search (AutoSuggestBox)
     private StorageFile? _searchSelectedFile;
@@ -147,8 +152,7 @@ public sealed partial class MainWindow : Window
                 ExtendsContentIntoTitleBar = true;
                 SetTitleBar(null);
 
-                // Optional (recommended for “YouTube feel”): hide window border/title bar
-                // Still an overlapped window (NOT fullscreen presenter).
+                // Optional: hide window border/title bar
                 if (_appWindow.Presenter is OverlappedPresenter op)
                 {
                     op.SetBorderAndTitleBar(false,false);
@@ -183,7 +187,7 @@ public sealed partial class MainWindow : Window
 
                 DispatcherQueue.TryEnqueue(() =>
                 {
-                    // Restore Nav first (so layout is correct before bringing chrome back)
+                    // Restore Nav first
                     NavView.PaneDisplayMode = _prevNavPaneDisplayMode;
 
                     NavView.CompactPaneLength = _prevNavCompactPaneLength;
@@ -216,14 +220,21 @@ public sealed partial class MainWindow : Window
     public void TogglePlayerFullscreen() => SetPlayerFullscreen(!IsPlayerFullscreen);
 
     // ---------------------------
-    // Public API for SettingsPage
+    // Public API for SettingsPage / PlayerPage
     // ---------------------------
     public PlayerSettings GetPlayerSettings() => _playerSettings;
 
+    // ✅ Save-only (NO ApplySettings call)
+    public void SavePlayerSettings(PlayerSettings settings)
+    {
+        _playerSettings = (settings ?? new PlayerSettings()).Clone();
+        PlayerSettingsStore.Save(_playerSettings);
+    }
+
+    // ✅ Save + Apply
     public void SaveAndApplyPlayerSettings(PlayerSettings settings)
     {
-        _playerSettings = settings;
-        PlayerSettingsStore.Save(settings);
+        SavePlayerSettings(settings);
 
         if (RootFrame.Content is VideoBeast.Pages.PlayerPage page)
             page.ApplySettings(_playerSettings);
@@ -337,12 +348,37 @@ public sealed partial class MainWindow : Window
 
     private NavigationViewItem CreateFileNavItem(StorageFile file)
     {
-        return new NavigationViewItem
+        var item = new NavigationViewItem
         {
             Content = file.Name,
             Icon = new SymbolIcon(Symbol.Video),
             Tag = new NodeContent(file.Name,Symbol.Video,null,file)
         };
+
+        // ✅ Context menu (right-click / touch-and-hold)
+        item.ContextFlyout = CreateFileContextFlyout(file);
+
+        // ✅ Make right-click also "select" the item logically (and visually)
+        item.RightTapped += (_,__) =>
+        {
+            NavView.SelectedItem = item;
+            _selectedFile = file;
+            _searchSelectedFile = null;
+        };
+
+        // Optional: keyboard context menu key (Shift+F10)
+        item.KeyDown += (_,e) =>
+        {
+            if (e.Key == Windows.System.VirtualKey.Application ||
+                (e.Key == Windows.System.VirtualKey.F10 && (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(Windows.System.VirtualKey.Shift).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))))
+            {
+                NavView.SelectedItem = item;
+                _selectedFile = file;
+                _searchSelectedFile = null;
+            }
+        };
+
+        return item;
     }
 
     private async Task LoadFolderChildrenIntoNavItemAsync(StorageFolder folder,NavigationViewItem folderItem)
@@ -388,7 +424,7 @@ public sealed partial class MainWindow : Window
     }
 
     // ---------------------------
-    // NavigationView: lazy-load on expand (prevents WinRT invalid vector subscript)
+    // NavigationView: lazy-load on expand
     // ---------------------------
     private async void NavView_Expanding(NavigationView sender,NavigationViewItemExpandingEventArgs args)
     {
@@ -491,6 +527,8 @@ public sealed partial class MainWindow : Window
         {
             page.ApplySettings(_playerSettings);
             page.Play(file,_playerSettings);
+
+            _playingFilePath = file.Path;
             _pendingPlayFile = null;
         }
     }
@@ -505,6 +543,7 @@ public sealed partial class MainWindow : Window
             if (_pendingPlayFile is not null)
             {
                 page.Play(_pendingPlayFile,_playerSettings);
+                _playingFilePath = _pendingPlayFile.Path;
                 _pendingPlayFile = null;
             }
             else
@@ -618,7 +657,7 @@ public sealed partial class MainWindow : Window
         var hwnd = WindowNative.GetWindowHandle(this);
         InitializeWithWindow.Initialize(picker,hwnd);
 
-        StorageFolder folder = await picker.PickSingleFolderAsync();
+        var folder = await picker.PickSingleFolderAsync();
         if (folder is null) return null;
 
         StorageApplicationPermissions.FutureAccessList.AddOrReplace(LibraryFolderToken,folder);
@@ -719,13 +758,241 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        await DeleteFileWithConfirmAsync(_selectedFile);
+    }
+
+    private async void OpenFolder_Click()
+    {
+        if (!await EnsureLibraryFolderAsync()) return;
+        await Launcher.LaunchFolderAsync(_libraryFolder!);
+    }
+
+    // ---------------------------
+    // Context menu + file operations
+    // ---------------------------
+    private MenuFlyout CreateFileContextFlyout(StorageFile file)
+    {
+        var flyout = new MenuFlyout();
+
+        var openContaining = new MenuFlyoutItem
+        {
+            Text = "Open containing folder",
+            Icon = new SymbolIcon(Symbol.Folder)
+        };
+        openContaining.Click += async (_,__) =>
+        {
+            SelectFileFromContext(file);
+            await OpenContainingFolderAsync(file);
+        };
+
+        var copyPath = new MenuFlyoutItem
+        {
+            Text = "Copy path",
+            Icon = new SymbolIcon(Symbol.Copy)
+        };
+        copyPath.Click += (_,__) =>
+        {
+            SelectFileFromContext(file);
+            CopyPathToClipboard(file);
+        };
+
+        var rename = new MenuFlyoutItem
+        {
+            Text = "Rename",
+            Icon = new SymbolIcon(Symbol.Edit)
+        };
+        rename.Click += async (_,__) =>
+        {
+            SelectFileFromContext(file);
+            await RenameFileWithDialogAsync(file);
+        };
+
+        var delete = new MenuFlyoutItem
+        {
+            Text = "Delete",
+            Icon = new SymbolIcon(Symbol.Delete)
+        };
+        delete.Click += async (_,__) =>
+        {
+            SelectFileFromContext(file);
+            await DeleteFileWithConfirmAsync(file);
+        };
+
+        flyout.Items.Add(openContaining);
+        flyout.Items.Add(copyPath);
+        flyout.Items.Add(rename);
+        flyout.Items.Add(new MenuFlyoutSeparator());
+        flyout.Items.Add(delete);
+
+        return flyout;
+    }
+
+    private void SelectFileFromContext(StorageFile file)
+    {
+        _selectedFile = file;
+        _searchSelectedFile = null;
+    }
+
+    private async Task OpenContainingFolderAsync(StorageFile file)
+    {
         try
         {
-            await _selectedFile.DeleteAsync();
-            _selectedFile = null;
+            var dir = Path.GetDirectoryName(file.Path);
+            if (string.IsNullOrWhiteSpace(dir))
+            {
+                ShowStatus("Could not resolve the containing folder.",InfoBarSeverity.Warning);
+                return;
+            }
 
-            if (RootFrame.Content is VideoBeast.Pages.PlayerPage page)
-                page.StopAndShowEmpty();
+            var folder = await StorageFolder.GetFolderFromPathAsync(dir);
+            await Launcher.LaunchFolderAsync(folder);
+        }
+        catch
+        {
+            ShowStatus("Could not open containing folder (access denied).",InfoBarSeverity.Error);
+        }
+    }
+
+    private void CopyPathToClipboard(StorageFile file)
+    {
+        try
+        {
+            var dp = new DataPackage();
+            dp.SetText(file.Path);
+
+            Clipboard.SetContent(dp);
+            Clipboard.Flush();
+
+            ShowStatus("Path copied to clipboard.");
+        }
+        catch
+        {
+            ShowStatus("Failed to copy path to clipboard.",InfoBarSeverity.Error);
+        }
+    }
+
+    private async Task RenameFileWithDialogAsync(StorageFile file)
+    {
+        if (!await EnsureLibraryFolderAsync()) return;
+
+        string oldPath = file.Path;
+        string ext = file.FileType; // ".mp4"
+
+        // If the file is playing, stop first to avoid file lock issues
+        if (string.Equals(_playingFilePath,oldPath,StringComparison.OrdinalIgnoreCase)
+            && RootFrame.Content is VideoBeast.Pages.PlayerPage pagePlaying)
+        {
+            pagePlaying.StopAndShowEmpty();
+            _playingFilePath = null;
+            await Task.Yield();
+        }
+
+        var baseName = await PromptRenameBaseNameAsync(file,ext);
+        if (baseName is null)
+            return;
+
+        // If they included extension, strip it
+        if (!string.IsNullOrEmpty(ext) && baseName.EndsWith(ext,StringComparison.OrdinalIgnoreCase))
+            baseName = baseName[..^ext.Length];
+
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            ShowStatus("Rename canceled (empty name).",InfoBarSeverity.Warning);
+            return;
+        }
+
+        if (baseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            ShowStatus("Invalid file name characters.",InfoBarSeverity.Warning);
+            return;
+        }
+
+        string newName = baseName + ext;
+
+        try
+        {
+            await file.RenameAsync(newName,NameCollisionOption.FailIfExists);
+
+            // Update selected reference if we renamed the selected file
+            if (_selectedFile?.Path == oldPath)
+                _selectedFile = file;
+
+            await RebuildNavMenuAsync();
+            ShowStatus("Renamed file.");
+        }
+        catch
+        {
+            ShowStatus("Rename failed (name may already exist or file is locked).",InfoBarSeverity.Error);
+        }
+    }
+
+    private async Task<string?> PromptRenameBaseNameAsync(StorageFile file,string ext)
+    {
+        var tb = new TextBox
+        {
+            Text = file.DisplayName, // name without extension
+            PlaceholderText = "New name",
+            MinWidth = 320
+        };
+
+        var content = new StackPanel { Spacing = 8 };
+        content.Children.Add(new TextBlock
+        {
+            Text = "Enter a new name:",
+            TextWrapping = TextWrapping.Wrap
+        });
+        content.Children.Add(tb);
+        content.Children.Add(new TextBlock
+        {
+            Text = $"Extension: {ext}",
+            Opacity = 0.7
+        });
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            Title = "Rename file",
+            Content = content,
+            PrimaryButtonText = "Rename",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result != ContentDialogResult.Primary)
+            return null;
+
+        return tb.Text?.Trim();
+    }
+
+    private async Task DeleteFileWithConfirmAsync(StorageFile file)
+    {
+        if (!await EnsureLibraryFolderAsync()) return;
+
+        bool ok = await ConfirmDeleteAsync(file);
+        if (!ok)
+        {
+            ShowStatus("Delete canceled.");
+            return;
+        }
+
+        string targetPath = file.Path;
+
+        // If deleting the currently playing file, stop first to release file handle
+        if (string.Equals(_playingFilePath,targetPath,StringComparison.OrdinalIgnoreCase)
+            && RootFrame.Content is VideoBeast.Pages.PlayerPage pagePlaying)
+        {
+            pagePlaying.StopAndShowEmpty();
+            _playingFilePath = null;
+            await Task.Yield();
+        }
+
+        try
+        {
+            await file.DeleteAsync(StorageDeleteOption.Default);
+
+            if (_selectedFile?.Path == targetPath)
+                _selectedFile = null;
 
             await RebuildNavMenuAsync();
             ShowStatus("Deleted file.");
@@ -736,10 +1003,42 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async void OpenFolder_Click()
+    private async Task<bool> ConfirmDeleteAsync(StorageFile file)
     {
-        if (!await EnsureLibraryFolderAsync()) return;
-        await Launcher.LaunchFolderAsync(_libraryFolder!);
+        var content = new StackPanel { Spacing = 8 };
+
+        content.Children.Add(new TextBlock
+        {
+            Text = "Are you sure you want to delete this file?",
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = file.Name,
+            FontWeight = FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        content.Children.Add(new TextBlock
+        {
+            Text = file.Path,
+            Opacity = 0.7,
+            TextWrapping = TextWrapping.Wrap
+        });
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = RootGrid.XamlRoot,
+            Title = "Confirm delete",
+            Content = content,
+            PrimaryButtonText = "Delete",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close
+        };
+
+        var result = await dialog.ShowAsync();
+        return result == ContentDialogResult.Primary;
     }
 
     // ---------------------------
@@ -772,9 +1071,9 @@ public sealed partial class MainWindow : Window
         }
 
         int imported = 0;
-        foreach (var file in files)
+        foreach (var f in files)
         {
-            await file.CopyAsync(_libraryFolder!,file.Name,NameCollisionOption.GenerateUniqueName);
+            await f.CopyAsync(_libraryFolder!,f.Name,NameCollisionOption.GenerateUniqueName);
             imported++;
         }
 

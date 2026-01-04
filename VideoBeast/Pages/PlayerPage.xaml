@@ -1,25 +1,24 @@
 <Page
-    x:Class="VideoBeast.Pages.PlayerPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+	x:Class="VideoBeast.Pages.PlayerPage"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d">
 
 	<Grid
-        x:Name="LayoutRoot"
-        PointerMoved="PlayerArea_PointerMoved"
-        PointerPressed="PlayerArea_PointerPressed"
-        Tapped="PlayerArea_Tapped">
-
+		x:Name="LayoutRoot"
+		PointerMoved="PlayerArea_PointerMoved"
+		PointerPressed="PlayerArea_PointerPressed"
+		Tapped="PlayerArea_Tapped">
 		<Border
-            x:Name="CardShell"
-            Margin="12"
-            Padding="12"
-            Background="{StaticResource Card}"
-            BorderBrush="{StaticResource Stroke}"
-            BorderThickness="1"
-            CornerRadius="18">
+			x:Name="CardShell"
+			Margin="5"
+			Padding="0"
+			Background="Transparent"
+			BorderBrush="Transparent"
+			BorderThickness="0"
+			CornerRadius="0">
 
 			<Grid RowSpacing="10">
 				<Grid.RowDefinitions>
@@ -27,49 +26,49 @@
 					<RowDefinition Height="Auto" />
 				</Grid.RowDefinitions>
 
-				<!-- Player host -->
+				<!--  Player host  -->
 				<Grid Grid.Row="0">
 					<Border
-                        x:Name="PlayerHost"
-                        Background="#FF000000"
-                        BorderBrush="{StaticResource Stroke}"
-                        BorderThickness="1"
-                        CornerRadius="16">
+						x:Name="PlayerHost"
+						Background="#FF000000"
+						BorderBrush="{StaticResource Stroke}"
+						BorderThickness="1"
+						CornerRadius="16">
 
 						<Grid
-							Padding="0"
+							x:Name="PlayerArea"
 							Margin="0"
-                            x:Name="PlayerArea"
-                            PointerMoved="PlayerArea_PointerMoved"
-                            PointerPressed="PlayerArea_PointerPressed"
-                            Tapped="PlayerArea_Tapped">
+							Padding="0"
+							PointerMoved="PlayerArea_PointerMoved"
+							PointerPressed="PlayerArea_PointerPressed"
+							Tapped="PlayerArea_Tapped">
 
 							<MediaPlayerElement
-                                x:Name="Player"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                AreTransportControlsEnabled="False"
-                                AutoPlay="False"
-                                Background="Black"
-                                Stretch="UniformToFill" />
+								x:Name="Player"
+								HorizontalAlignment="Stretch"
+								VerticalAlignment="Stretch"
+								AreTransportControlsEnabled="False"
+								AutoPlay="False"
+								Background="Black"
+								Stretch="UniformToFill" />
 
-							<!-- ControlBar -->
+							<!--  ControlBar  -->
 							<Border
-                                x:Name="ControlBar"
-                                Margin="12"
-                                Padding="10"
-                                VerticalAlignment="Bottom"
-                                Background="#AA111111"
-                                BorderBrush="{StaticResource Stroke}"
-                                BorderThickness="1"
-                                CornerRadius="12"
-                                Opacity="1"
-                                PointerEntered="ControlBar_PointerEntered"
-                                PointerExited="ControlBar_PointerExited">
+								x:Name="ControlBar"
+								Margin="12"
+								Padding="10"
+								VerticalAlignment="Bottom"
+								Background="#AA111111"
+								BorderBrush="{StaticResource Stroke}"
+								BorderThickness="1"
+								CornerRadius="12"
+								Opacity="1"
+								PointerEntered="ControlBar_PointerEntered"
+								PointerExited="ControlBar_PointerExited">
 
 								<StackPanel Spacing="10">
 
-									<!-- Seek row -->
+									<!--  Seek row  -->
 									<Grid ColumnSpacing="10">
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition Width="Auto" />
@@ -77,30 +76,32 @@
 											<ColumnDefinition Width="Auto" />
 										</Grid.ColumnDefinitions>
 
-										<TextBlock x:Name="PositionText"
-                                                   Grid.Column="0"
-                                                   FontSize="12"
-                                                   Foreground="White"
-                                                   Text="0:00" />
+										<TextBlock
+											x:Name="PositionText"
+											Grid.Column="0"
+											FontSize="12"
+											Foreground="White"
+											Text="0:00" />
 
 										<Slider
-                                            x:Name="SeekSlider"
-                                            Grid.Column="1"
-                                            Maximum="1"
-                                            Minimum="0"
-                                            PointerPressed="SeekSlider_PointerPressed"
-                                            PointerReleased="SeekSlider_PointerReleased"
-                                            ValueChanged="SeekSlider_ValueChanged"
-                                            Value="0" />
+											x:Name="SeekSlider"
+											Grid.Column="1"
+											Maximum="1"
+											Minimum="0"
+											SnapsTo="StepValues"
+											StepFrequency="0.1"
+											ValueChanged="SeekSlider_ValueChanged"
+											Value="0" />
 
-										<TextBlock x:Name="DurationText"
-                                                   Grid.Column="2"
-                                                   FontSize="12"
-                                                   Foreground="White"
-                                                   Text="0:00" />
+										<TextBlock
+											x:Name="DurationText"
+											Grid.Column="2"
+											FontSize="12"
+											Foreground="White"
+											Text="0:00" />
 									</Grid>
 
-									<!-- Buttons row -->
+									<!--  Buttons row  -->
 									<Grid ColumnSpacing="12">
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition Width="Auto" />
@@ -113,10 +114,16 @@
 											<ColumnDefinition Width="Auto" />
 										</Grid.ColumnDefinitions>
 
-										<Button x:Name="PlayPauseButton" Grid.Column="0" Click="PlayPause_Click">
+										<Button
+											x:Name="PlayPauseButton"
+											Grid.Column="0"
+											Click="PlayPause_Click">
 											<StackPanel Orientation="Horizontal" Spacing="8">
 												<SymbolIcon x:Name="PlayPauseIcon" Symbol="Play" />
-												<TextBlock x:Name="PlayPauseText" Foreground="White" Text="Play" />
+												<TextBlock
+													x:Name="PlayPauseText"
+													Foreground="White"
+													Text="Play" />
 											</StackPanel>
 										</Button>
 
@@ -124,52 +131,66 @@
 											<SymbolIcon Symbol="Stop" />
 										</Button>
 
-										<ToggleButton x:Name="LoopToggle"
-                                                      Grid.Column="2"
-                                                      Click="LoopToggle_Click"
-                                                      ToolTipService.ToolTip="Loop">
+										<ToggleButton
+											x:Name="LoopToggle"
+											Grid.Column="2"
+											Click="LoopToggle_Click"
+											ToolTipService.ToolTip="Loop">
 											<SymbolIcon Symbol="RepeatAll" />
 										</ToggleButton>
 
-										<ToggleButton x:Name="MuteToggle"
-                                                      Grid.Column="3"
-                                                      Click="MuteToggle_Click"
-                                                      ToolTipService.ToolTip="Mute">
+										<ToggleButton
+											x:Name="MuteToggle"
+											Grid.Column="3"
+											Click="MuteToggle_Click"
+											ToolTipService.ToolTip="Mute">
 											<SymbolIcon x:Name="MuteIcon" Symbol="Volume" />
 										</ToggleButton>
 
-										<StackPanel Grid.Column="4"
-                                                    VerticalAlignment="Center"
-                                                    Orientation="Horizontal"
-                                                    Spacing="8">
-											<TextBlock FontSize="12" Foreground="White" Text="Vol" />
+										<StackPanel
+											Grid.Column="4"
+											VerticalAlignment="Center"
+											Orientation="Horizontal"
+											Spacing="8">
+											<TextBlock
+												FontSize="12"
+												Foreground="White"
+												Text="Vol" />
 											<Slider
-                                                x:Name="VolumeSlider"
-                                                Width="160"
-                                                LargeChange="0.10"
-                                                Maximum="1"
-                                                Minimum="0"
-                                                SmallChange="0.05"
-                                                ValueChanged="VolumeSlider_ValueChanged" />
+												x:Name="VolumeSlider"
+												Width="160"
+												LargeChange="10"
+												Maximum="100"
+												Minimum="0"
+												SmallChange="1"
+												SnapsTo="StepValues"
+												StepFrequency="1"
+												ValueChanged="VolumeSlider_ValueChanged" />
+
 										</StackPanel>
 
 										<Grid Grid.Column="5" />
 
-										<ComboBox x:Name="RateCombo"
-                                                  Grid.Column="6"
-                                                  Width="110"
-                                                  SelectionChanged="RateCombo_SelectionChanged">
+										<ComboBox
+											x:Name="RateCombo"
+											Grid.Column="6"
+											Width="110"
+											SelectionChanged="RateCombo_SelectionChanged">
 											<ComboBoxItem Content="0.5x" Tag="0.5" />
-											<ComboBoxItem Content="1.0x" IsSelected="True" Tag="1.0" />
+											<ComboBoxItem
+												Content="1.0x"
+												IsSelected="True"
+												Tag="1.0" />
 											<ComboBoxItem Content="1.25x" Tag="1.25" />
 											<ComboBoxItem Content="1.5x" Tag="1.5" />
 											<ComboBoxItem Content="2.0x" Tag="2.0" />
 										</ComboBox>
 
-										<ToggleButton x:Name="FullWindowToggle"
-                                                      Grid.Column="7"
-                                                      Click="FullWindowToggle_Click"
-                                                      ToolTipService.ToolTip="Full screen">
+										<ToggleButton
+											x:Name="FullWindowToggle"
+											Grid.Column="7"
+											Click="FullWindowToggle_Click"
+											ToolTipService.ToolTip="Full screen">
 											<SymbolIcon Symbol="FullScreen" />
 										</ToggleButton>
 									</Grid>
@@ -178,23 +199,28 @@
 						</Grid>
 					</Border>
 
-					<!-- Empty state -->
+					<!--  Empty state  -->
 					<Border
-                        x:Name="EmptyState"
-                        Background="{StaticResource Card2}"
-                        BorderBrush="{StaticResource Stroke}"
-                        BorderThickness="1"
-                        CornerRadius="16"
-                        Opacity="0.98"
-                        Visibility="Collapsed">
-						<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-							<TextBlock HorizontalAlignment="Center"
-                                       FontSize="22"
-                                       FontWeight="SemiBold"
-                                       Text="Pick a folder, then import MP4s" />
-							<TextBlock HorizontalAlignment="Center"
-                                       Foreground="{StaticResource TextFaint}"
-                                       Text="Use the left navigation pane to browse folders/files." />
+						x:Name="EmptyState"
+						Background="{StaticResource Card2}"
+						BorderBrush="{StaticResource Stroke}"
+						BorderThickness="1"
+						CornerRadius="16"
+						Opacity="0.98"
+						Visibility="Collapsed">
+						<StackPanel
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							Spacing="10">
+							<TextBlock
+								HorizontalAlignment="Center"
+								FontSize="22"
+								FontWeight="SemiBold"
+								Text="Pick a folder, then import MP4s" />
+							<TextBlock
+								HorizontalAlignment="Center"
+								Foreground="{StaticResource TextFaint}"
+								Text="Use the left navigation pane to browse folders/files." />
 						</StackPanel>
 					</Border>
 				</Grid>
@@ -204,28 +230,30 @@
 
 		<VisualStateManager.VisualStateGroups>
 
-			<!-- ControlBar fade -->
+			<!--  ControlBar fade  -->
 			<VisualStateGroup x:Name="ControlsStates">
 				<VisualState x:Name="ControlsVisible">
 					<Storyboard>
-						<DoubleAnimation Storyboard.TargetName="ControlBar"
-                                         Storyboard.TargetProperty="Opacity"
-                                         To="1"
-                                         Duration="0:0:0.15" />
+						<DoubleAnimation
+							Storyboard.TargetName="ControlBar"
+							Storyboard.TargetProperty="Opacity"
+							To="1"
+							Duration="0:0:0.15" />
 					</Storyboard>
 				</VisualState>
 
 				<VisualState x:Name="ControlsHidden">
 					<Storyboard>
-						<DoubleAnimation Storyboard.TargetName="ControlBar"
-                                         Storyboard.TargetProperty="Opacity"
-                                         To="0"
-                                         Duration="0:0:0.20" />
+						<DoubleAnimation
+							Storyboard.TargetName="ControlBar"
+							Storyboard.TargetProperty="Opacity"
+							To="0"
+							Duration="0:0:0.20" />
 					</Storyboard>
 				</VisualState>
 			</VisualStateGroup>
 
-			<!-- Fill-the-window mode -->
+			<!--  Fill-the-window mode  -->
 			<VisualStateGroup x:Name="PlayerWindowStates">
 				<VisualState x:Name="PlayerNormal" />
 

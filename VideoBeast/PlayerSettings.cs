@@ -1,93 +1,46 @@
-﻿using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
+﻿// PlayerSettings.cs
+using Microsoft.UI.Xaml.Media;
 
-using Windows.Storage;
+using System.Text.Json.Serialization;
 
 namespace VideoBeast;
 
-public static class PlayerSettingsStore
+public sealed class PlayerSettings
 {
-    private const string Key = "player.settings.json";
+    // MediaPlayerElement DPs
+    public bool AutoPlay { get; set; } = true;
+    public bool AreTransportControlsEnabled { get; set; } = true;
 
-    private static readonly JsonSerializerOptions Options = new()
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public Stretch Stretch { get; set; } = Stretch.Uniform;
+
+    public bool IsFullWindow { get; set; } = false;
+
+    // MediaPlayer settings
+    public double Volume { get; set; } = 1.0;     // 0..1
+    public bool IsMuted { get; set; } = false;
+    public bool IsLoopingEnabled { get; set; } = false;
+
+    // PlaybackSession settings
+    public double PlaybackRate { get; set; } = 1.0; // e.g. 0.25..4.0
+
+    // Optional: what color shows in “bars” area
+    // (This is your container background, not the video itself.)
+    public string LetterboxColorHex { get; set; } = "#FF000000";
+
+    // Clone so MainWindow can store an immutable snapshot and avoid reference feedback loops.
+    public PlayerSettings Clone() => new PlayerSettings
     {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
+        AutoPlay = this.AutoPlay,
+        AreTransportControlsEnabled = this.AreTransportControlsEnabled,
+        Stretch = this.Stretch,
+        IsFullWindow = this.IsFullWindow,
+
+        Volume = this.Volume,
+        IsMuted = this.IsMuted,
+        IsLoopingEnabled = this.IsLoopingEnabled,
+
+        PlaybackRate = this.PlaybackRate,
+        LetterboxColorHex = this.LetterboxColorHex
     };
-
-    public static PlayerSettings Load()
-    {
-        try
-        {
-            var values = ApplicationData.Current.LocalSettings.Values;
-
-            if (values.TryGetValue(Key,out var raw)
-                && raw is string json
-                && !string.IsNullOrWhiteSpace(json))
-            {
-                json = NormalizeJson(json);
-
-                return JsonSerializer.Deserialize<PlayerSettings>(json,Options)
-                       ?? new PlayerSettings();
-            }
-        }
-        catch
-        {
-            // swallow + fall back
-        }
-
-        return new PlayerSettings();
-    }
-
-    public static void Save(PlayerSettings settings)
-    {
-        var json = JsonSerializer.Serialize(settings,Options);
-        ApplicationData.Current.LocalSettings.Values[Key] = json;
-    }
-
-    public static string ExportJson(PlayerSettings settings)
-        => JsonSerializer.Serialize(settings,Options);
-
-    public static bool TryImportJson(string json,out PlayerSettings settings,out string error)
-    {
-        try
-        {
-            json = NormalizeJson(json);
-
-            settings = JsonSerializer.Deserialize<PlayerSettings>(json,Options)
-                       ?? new PlayerSettings();
-
-            error = "";
-            return true;
-        }
-        catch (Exception ex)
-        {
-            settings = new PlayerSettings();
-            error = ex.Message;
-            return false;
-        }
-    }
-
-    // Back-compat: if older versions saved "PlayerStretch", map it to "Stretch".
-    // This keeps old settings working without changing your PlayerSettings JSON shape.
-    private static string NormalizeJson(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-            return json;
-
-        if (json.Contains("\"PlayerStretch\"",StringComparison.Ordinal))
-        {
-            // Replace the property name only (robust vs whitespace)
-            json = Regex.Replace(
-                json,
-                "\"PlayerStretch\"\\s*:",
-                "\"Stretch\":",
-                RegexOptions.CultureInvariant
-            );
-        }
-
-        return json;
-    }
 }
