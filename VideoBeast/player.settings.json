@@ -1,0 +1,15 @@
+{
+  "AutoPlay": true,
+  "AreTransportControlsEnabled": true,
+
+  "Stretch": "Uniform",
+  "IsFullWindow": false,
+
+  "Volume": 0.85,
+  "IsMuted": false,
+  "IsLoopingEnabled": false,
+
+  "PlaybackRate": 1.0,
+
+  "LetterboxColorHex": "#FF000000"
+}
