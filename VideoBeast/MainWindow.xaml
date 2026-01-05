@@ -1,84 +1,25 @@
-<!-- MainWindow.xaml -->
 <Window
-	x:Class="VideoBeast.MainWindow"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	Title="VideoBeast"
-	mc:Ignorable="d">
+    x:Class="VideoBeast.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:VideoBeast"
+    xmlns:controls="using:VideoBeast.Controls"
+    Title="VideoBeast"
+    mc:Ignorable="d">
 
 	<Window.SystemBackdrop>
 		<MicaBackdrop />
 	</Window.SystemBackdrop>
 
 	<Grid
-		x:Name="RootGrid"
-		AllowDrop="True"
-		DragOver="RootGrid_DragOver"
-		Drop="RootGrid_Drop"
-		Loaded="RootGrid_Loaded">
+        x:Name="RootGrid"
+        AllowDrop="True"
+        DragOver="RootGrid_DragOver"
+        Drop="RootGrid_Drop"
+        Loaded="RootGrid_Loaded">
 
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-			<RowDefinition Height="Auto" />
-		</Grid.RowDefinitions>
-
-		<!-- WinUI TitleBar -->
-		<TitleBar
-			x:Name="titleBar"
-			Title="VideoBeast"
-			Grid.Row="0"
-			BackRequested="TitleBar_BackRequested"
-			IsBackButtonVisible="{x:Bind RootFrame.CanGoBack, Mode=OneWay}"
-			IsPaneToggleButtonVisible="True"
-			PaneToggleRequested="TitleBar_PaneToggleRequested">
-
-			<TitleBar.LeftHeader>
-				<FontIcon
-					Margin="0,0,8,0"
-					FontSize="14"
-					Glyph="&#xE714;" />
-			</TitleBar.LeftHeader>
-
-			<TitleBar.Content>
-				<AutoSuggestBox
-					x:Name="TopSearchBox"
-					Width="360"
-					HorizontalAlignment="Stretch"
-					VerticalAlignment="Center"
-					PlaceholderText="Search MP4s…"
-					QueryIcon="Find"
-					QuerySubmitted="TopSearchBox_QuerySubmitted"
-					SuggestionChosen="TopSearchBox_SuggestionChosen"
-					TextChanged="TopSearchBox_TextChanged" />
-			</TitleBar.Content>
-		</TitleBar>
-
-		<!-- Main navigation + frame host -->
-		<NavigationView
-			x:Name="NavView"
-			Grid.Row="1"
-			Expanding="NavView_Expanding"
-			IsBackButtonVisible="Collapsed"
-			IsPaneToggleButtonVisible="False"
-			IsSettingsVisible="True"
-			ItemInvoked="NavView_ItemInvoked"
-			PaneDisplayMode="Left"
-			SelectionChanged="NavView_SelectionChanged">
-
-			<Frame x:Name="RootFrame" Navigated="RootFrame_Navigated" />
-		</NavigationView>
-
-		<!-- Status -->
-		<InfoBar
-			x:Name="StatusBar"
-			Title="Status"
-			Grid.Row="2"
-			Margin="12,0,12,12"
-			IsOpen="False"
-			Message=""
-			Severity="Informational" />
+		<controls:AppShell x:Name="Shell" />
 	</Grid>
 </Window>

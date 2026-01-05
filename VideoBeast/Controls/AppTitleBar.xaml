@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="VideoBeast.Controls.AppTitleBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:VideoBeast.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+	<TitleBar
+        x:Name="titleBar"
+        Title="VideoBeast"
+        IsPaneToggleButtonVisible="True">
+
+		<TitleBar.LeftHeader>
+			<FontIcon
+                Margin="0,0,8,0"
+                FontSize="14"
+                Glyph="&#xE714;" />
+		</TitleBar.LeftHeader>
+
+		<TitleBar.Content>
+			<AutoSuggestBox
+                x:Name="TopSearchBox"
+                Width="360"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                PlaceholderText="Search MP4s…"
+                QueryIcon="Find" />
+		</TitleBar.Content>
+	</TitleBar>
+</UserControl>
