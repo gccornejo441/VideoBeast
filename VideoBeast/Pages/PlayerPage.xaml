@@ -1,21 +1,21 @@
 <Page
-    x:Class="VideoBeast.Pages.PlayerPage"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+	x:Class="VideoBeast.Pages.PlayerPage"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+	mc:Ignorable="d">
 
 	<Page.Resources>
 
-		<!-- ========================= -->
-		<!-- Chip button (compact)     -->
-		<!-- ========================= -->
+		<!--  =========================  -->
+		<!--  Chip button (compact)  -->
+		<!--  =========================  -->
 		<Style x:Key="PlayerChipButtonStyle" TargetType="Button">
-			<Setter Property="MinWidth" Value="32" />
-			<Setter Property="MinHeight" Value="32" />
-			<Setter Property="Padding" Value="6" />
+			<Setter Property="MinWidth" Value="36" />
+			<Setter Property="MinHeight" Value="36" />
+			<Setter Property="Padding" Value="8" />
 			<Setter Property="CornerRadius" Value="10" />
 			<Setter Property="Background" Value="#14FFFFFF" />
 			<Setter Property="BorderThickness" Value="0" />
@@ -25,10 +25,14 @@
 				<Setter.Value>
 					<ControlTemplate TargetType="Button">
 						<Border
-                            x:Name="Root"
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
+							x:Name="Root"
+							Background="{TemplateBinding Background}"
+							BorderThickness="{TemplateBinding BorderThickness}"
+							CornerRadius="{TemplateBinding CornerRadius}">
+							<ContentPresenter
+								HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								Content="{TemplateBinding Content}" />
 
 							<VisualStateManager.VisualStateGroups>
 								<VisualStateGroup x:Name="CommonStates">
@@ -50,20 +54,15 @@
 									</VisualState>
 								</VisualStateGroup>
 							</VisualStateManager.VisualStateGroups>
-
-							<ContentPresenter
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Content="{TemplateBinding Content}" />
 						</Border>
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
 		</Style>
 
-		<!-- ========================= -->
-		<!-- Chip toggle (compact)     -->
-		<!-- ========================= -->
+		<!--  =========================  -->
+		<!--  Chip toggle (compact)  -->
+		<!--  =========================  -->
 		<Style x:Key="PlayerChipToggleStyle" TargetType="ToggleButton">
 			<Setter Property="MinWidth" Value="32" />
 			<Setter Property="MinHeight" Value="32" />
@@ -77,11 +76,15 @@
 				<Setter.Value>
 					<ControlTemplate TargetType="ToggleButton">
 						<Border
-                            x:Name="Root"
-                            Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-
+							x:Name="Root"
+							Padding="{TemplateBinding Padding}"
+							Background="{TemplateBinding Background}"
+							BorderThickness="{TemplateBinding BorderThickness}"
+							CornerRadius="{TemplateBinding CornerRadius}">
+							<ContentPresenter
+								HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								Content="{TemplateBinding Content}" />
 							<VisualStateManager.VisualStateGroups>
 								<VisualStateGroup x:Name="CommonStates">
 									<VisualState x:Name="Normal" />
@@ -112,36 +115,31 @@
 									<VisualState x:Name="Indeterminate" />
 								</VisualStateGroup>
 							</VisualStateManager.VisualStateGroups>
-
-							<ContentPresenter
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Content="{TemplateBinding Content}" />
 						</Border>
 					</ControlTemplate>
 				</Setter.Value>
 			</Setter>
 		</Style>
 
-		<!-- ========================= -->
-		<!-- Small ComboBox            -->
-		<!-- ========================= -->
+		<!--  =========================  -->
+		<!--  Small ComboBox  -->
+		<!--  =========================  -->
 		<Style x:Key="PlayerSmallComboStyle" TargetType="ComboBox">
 			<Setter Property="MinHeight" Value="32" />
 			<Setter Property="FontSize" Value="12" />
 			<Setter Property="Padding" Value="10,6" />
 		</Style>
 
-		<!-- ========================= -->
-		<!-- Thin Slider (smaller thumb + thinner track) -->
-		<!-- ========================= -->
+		<!--  =========================  -->
+		<!--  Thin Slider (smaller thumb + thinner track)  -->
+		<!--  =========================  -->
 		<Style x:Key="PlayerThinSliderStyle" TargetType="Slider">
 			<Setter Property="Background" Value="#2AFFFFFF" />
 			<Setter Property="Foreground" Value="#DFFFFFFF" />
 			<Setter Property="MinHeight" Value="18" />
 			<Setter Property="Template">
 				<Setter.Value>
-					<!-- Adapted from a complete UWP slider template approach (kept required template parts) -->
+					<!--  Adapted from a complete UWP slider template approach (kept required template parts)  -->
 					<ControlTemplate TargetType="Slider">
 						<Grid Margin="{TemplateBinding Padding}">
 
@@ -153,10 +151,10 @@
 										<Setter.Value>
 											<ControlTemplate TargetType="Thumb">
 												<Border
-                                                    Background="{TemplateBinding Background}"
-                                                    CornerRadius="999"
-                                                    Width="{TemplateBinding Width}"
-                                                    Height="{TemplateBinding Height}" />
+													Width="{TemplateBinding Width}"
+													Height="{TemplateBinding Height}"
+													Background="{TemplateBinding Background}"
+													CornerRadius="999" />
 											</ControlTemplate>
 										</Setter.Value>
 									</Setter>
@@ -164,11 +162,10 @@
 							</Grid.Resources>
 
 							<Grid
-                                x:Name="SliderContainer"
-                                Background="Transparent"
-                                Control.IsTemplateFocusTarget="True">
-
-								<!-- Horizontal -->
+								x:Name="SliderContainer"
+								Background="Transparent"
+								Control.IsTemplateFocusTarget="True">
+								<!--  Horizontal  -->
 								<Grid x:Name="HorizontalTemplate" MinHeight="18">
 									<Grid.ColumnDefinitions>
 										<ColumnDefinition Width="Auto" />
@@ -176,7 +173,7 @@
 										<ColumnDefinition Width="*" />
 									</Grid.ColumnDefinitions>
 
-									<!-- collapse top/bottom spacing for a tighter “Netflix clean” look -->
+									<!--  collapse top/bottom spacing for a tighter “Netflix clean” look  -->
 									<Grid.RowDefinitions>
 										<RowDefinition Height="0" />
 										<RowDefinition Height="Auto" />
@@ -184,37 +181,37 @@
 									</Grid.RowDefinitions>
 
 									<Rectangle
-                                        x:Name="HorizontalTrackRect"
-                                        Grid.Row="1"
-                                        Grid.ColumnSpan="3"
-                                        Height="3"
-                                        RadiusX="2"
-                                        RadiusY="2"
-                                        Fill="{TemplateBinding Background}"
-                                        VerticalAlignment="Center" />
+										x:Name="HorizontalTrackRect"
+										Grid.Row="1"
+										Grid.ColumnSpan="3"
+										Height="3"
+										VerticalAlignment="Center"
+										Fill="{TemplateBinding Background}"
+										RadiusX="2"
+										RadiusY="2" />
 
 									<Rectangle
-                                        x:Name="HorizontalDecreaseRect"
-                                        Grid.Row="1"
-                                        Height="3"
-                                        RadiusX="2"
-                                        RadiusY="2"
-                                        Fill="{TemplateBinding Foreground}"
-                                        VerticalAlignment="Center" />
+										x:Name="HorizontalDecreaseRect"
+										Grid.Row="1"
+										Height="3"
+										VerticalAlignment="Center"
+										Fill="{TemplateBinding Foreground}"
+										RadiusX="2"
+										RadiusY="2" />
 
 									<Thumb
-                                        x:Name="HorizontalThumb"
-                                        Grid.Row="0"
-                                        Grid.RowSpan="3"
-                                        Grid.Column="1"
-                                        Width="12"
-                                        Height="12"
-                                        AutomationProperties.AccessibilityView="Raw"
-                                        DataContext="{TemplateBinding Value}"
-                                        Style="{StaticResource PlayerSliderThumbStyle}" />
+										x:Name="HorizontalThumb"
+										Grid.Row="0"
+										Grid.RowSpan="3"
+										Grid.Column="1"
+										Width="12"
+										Height="12"
+										AutomationProperties.AccessibilityView="Raw"
+										DataContext="{TemplateBinding Value}"
+										Style="{StaticResource PlayerSliderThumbStyle}" />
 								</Grid>
 
-								<!-- Vertical (not used, but keep template parts) -->
+								<!--  Vertical (not used, but keep template parts)  -->
 								<Grid x:Name="VerticalTemplate" Visibility="Collapsed">
 									<Grid.ColumnDefinitions>
 										<ColumnDefinition Width="0" />
@@ -228,33 +225,33 @@
 									</Grid.RowDefinitions>
 
 									<Rectangle
-                                        x:Name="VerticalTrackRect"
-                                        Grid.RowSpan="3"
-                                        Grid.Column="1"
-                                        Width="3"
-                                        RadiusX="2"
-                                        RadiusY="2"
-                                        Fill="{TemplateBinding Background}" />
+										x:Name="VerticalTrackRect"
+										Grid.RowSpan="3"
+										Grid.Column="1"
+										Width="3"
+										Fill="{TemplateBinding Background}"
+										RadiusX="2"
+										RadiusY="2" />
 
 									<Rectangle
-                                        x:Name="VerticalDecreaseRect"
-                                        Grid.Row="2"
-                                        Grid.Column="1"
-                                        Width="3"
-                                        RadiusX="2"
-                                        RadiusY="2"
-                                        Fill="{TemplateBinding Foreground}" />
+										x:Name="VerticalDecreaseRect"
+										Grid.Row="2"
+										Grid.Column="1"
+										Width="3"
+										Fill="{TemplateBinding Foreground}"
+										RadiusX="2"
+										RadiusY="2" />
 
 									<Thumb
-                                        x:Name="VerticalThumb"
-                                        Grid.Row="1"
-                                        Grid.Column="0"
-                                        Grid.ColumnSpan="3"
-                                        Width="12"
-                                        Height="12"
-                                        AutomationProperties.AccessibilityView="Raw"
-                                        DataContext="{TemplateBinding Value}"
-                                        Style="{StaticResource PlayerSliderThumbStyle}" />
+										x:Name="VerticalThumb"
+										Grid.Row="1"
+										Grid.Column="0"
+										Grid.ColumnSpan="3"
+										Width="12"
+										Height="12"
+										AutomationProperties.AccessibilityView="Raw"
+										DataContext="{TemplateBinding Value}"
+										Style="{StaticResource PlayerSliderThumbStyle}" />
 								</Grid>
 
 								<VisualStateManager.VisualStateGroups>
@@ -277,7 +274,6 @@
 										</VisualState>
 									</VisualStateGroup>
 								</VisualStateManager.VisualStateGroups>
-
 							</Grid>
 						</Grid>
 					</ControlTemplate>
@@ -288,20 +284,19 @@
 	</Page.Resources>
 
 	<Grid
-        x:Name="LayoutRoot"
-        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-        PointerMoved="PlayerArea_PointerMoved"
-        PointerPressed="PlayerArea_PointerPressed"
-        Tapped="PlayerArea_Tapped">
-
+		x:Name="LayoutRoot"
+		Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+		PointerMoved="PlayerArea_PointerMoved"
+		PointerPressed="PlayerArea_PointerPressed"
+		Tapped="PlayerArea_Tapped">
 		<Border
-            x:Name="CardShell"
-            Margin="5"
-            Padding="0"
-            Background="Transparent"
-            BorderBrush="Transparent"
-            BorderThickness="0"
-            CornerRadius="0">
+			x:Name="CardShell"
+			Margin="5"
+			Padding="0"
+			Background="Transparent"
+			BorderBrush="Transparent"
+			BorderThickness="0"
+			CornerRadius="0">
 
 			<Grid RowSpacing="10">
 				<Grid.RowDefinitions>
@@ -312,45 +307,45 @@
 				<Grid Grid.Row="0">
 
 					<Border
-                        x:Name="PlayerHost"
-                        Background="#FF000000"
-                        BorderThickness="0"
-                        CornerRadius="16">
+						x:Name="PlayerHost"
+						Background="#FF000000"
+						BorderThickness="0"
+						CornerRadius="16">
 
 						<Grid
-                            x:Name="PlayerArea"
-                            Margin="0"
-                            Padding="0"
-                            PointerMoved="PlayerArea_PointerMoved"
-                            PointerPressed="PlayerArea_PointerPressed"
-                            Tapped="PlayerArea_Tapped">
+							x:Name="PlayerArea"
+							Margin="0"
+							Padding="0"
+							PointerMoved="PlayerArea_PointerMoved"
+							PointerPressed="PlayerArea_PointerPressed"
+							Tapped="PlayerArea_Tapped">
 
 							<MediaPlayerElement
-                                x:Name="Player"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                AreTransportControlsEnabled="False"
-                                AutoPlay="False"
-                                Background="Black"
-                                Stretch="UniformToFill"
-                                Tapped="Player_Tapped" />
+								x:Name="Player"
+								HorizontalAlignment="Stretch"
+								VerticalAlignment="Stretch"
+								AreTransportControlsEnabled="False"
+								AutoPlay="False"
+								Background="Black"
+								Stretch="UniformToFill"
+								Tapped="Player_Tapped" />
 
-							<!-- Control Bar -->
+							<!--  Control Bar  -->
 							<Border
-                                x:Name="ControlBar"
-                                Margin="12"
-                                Padding="10"
-                                VerticalAlignment="Bottom"
-                                Background="#B0121212"
-                                BorderThickness="0"
-                                CornerRadius="12"
-                                Opacity="1"
-                                PointerEntered="ControlBar_PointerEntered"
-                                PointerExited="ControlBar_PointerExited">
+								x:Name="ControlBar"
+								Margin="12"
+								Padding="10"
+								VerticalAlignment="Bottom"
+								Background="#B0121212"
+								BorderThickness="0"
+								CornerRadius="12"
+								Opacity="1"
+								PointerEntered="ControlBar_PointerEntered"
+								PointerExited="ControlBar_PointerExited">
 
 								<StackPanel Spacing="8">
 
-									<!-- Timeline row -->
+									<!--  Timeline row  -->
 									<Grid ColumnSpacing="10">
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition Width="Auto" />
@@ -359,32 +354,32 @@
 										</Grid.ColumnDefinitions>
 
 										<TextBlock
-                                            x:Name="PositionText"
-                                            Grid.Column="0"
-                                            FontSize="12"
-                                            Foreground="White"
-                                            Text="0:00" />
+											x:Name="PositionText"
+											Grid.Column="0"
+											FontSize="12"
+											Foreground="White"
+											Text="0:00" />
 
 										<Slider
-                                            x:Name="SeekSlider"
-                                            Grid.Column="1"
-                                            Style="{StaticResource PlayerThinSliderStyle}"
-                                            Maximum="1"
-                                            Minimum="0"
-                                            SnapsTo="StepValues"
-                                            StepFrequency="0.1"
-                                            ValueChanged="SeekSlider_ValueChanged"
-                                            Value="0" />
+											x:Name="SeekSlider"
+											Grid.Column="1"
+											Maximum="1"
+											Minimum="0"
+											SnapsTo="StepValues"
+											StepFrequency="0.1"
+											Style="{StaticResource PlayerThinSliderStyle}"
+											ValueChanged="SeekSlider_ValueChanged"
+											Value="0" />
 
 										<TextBlock
-                                            x:Name="DurationText"
-                                            Grid.Column="2"
-                                            FontSize="12"
-                                            Foreground="White"
-                                            Text="0:00" />
+											x:Name="DurationText"
+											Grid.Column="2"
+											FontSize="12"
+											Foreground="White"
+											Text="0:00" />
 									</Grid>
 
-									<!-- Controls row -->
+									<!--  Controls row  -->
 									<Grid ColumnSpacing="10">
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition Width="Auto" />
@@ -397,118 +392,160 @@
 											<ColumnDefinition Width="Auto" />
 										</Grid.ColumnDefinitions>
 
-										<!-- Play/Pause -->
+										<!--  Play/Pause  -->
 										<Button
-                                            x:Name="PlayPauseButton"
-                                            Grid.Column="0"
-                                            Style="{StaticResource PlayerChipButtonStyle}"
-                                            Click="PlayPause_Click">
+											x:Name="PlayPauseButton"
+											Grid.Column="0"
+											Click="PlayPause_Click"
+											Style="{StaticResource PlayerChipButtonStyle}"
+											ToolTipService.ToolTip="Play">
 											<Grid>
-												<SymbolIcon x:Name="PlayPauseIcon" Symbol="Play" Foreground="White" Width="18" Height="18" />
-												<!-- Keep this for your existing code-behind logic; hidden so UI stays icon-only -->
+												<Viewbox
+													Width="16"
+													Height="16"
+													Stretch="Uniform">
+													<SymbolIcon
+														x:Name="PlayPauseIcon"
+														Foreground="White"
+														Symbol="Play" />
+												</Viewbox>
+
+												<!--  keep for your code-behind; hidden  -->
 												<TextBlock x:Name="PlayPauseText" Visibility="Collapsed" />
 											</Grid>
 										</Button>
 
-										<!-- Stop -->
+										<!--  Stop  -->
 										<Button
-                                            Grid.Column="1"
-                                            Style="{StaticResource PlayerChipButtonStyle}"
-                                            Click="Stop_Click"
-                                            ToolTipService.ToolTip="Stop">
-											<SymbolIcon Symbol="Stop" Foreground="White" Width="18" Height="18" />
+											Grid.Column="1"
+											Click="Stop_Click"
+											Style="{StaticResource PlayerChipButtonStyle}"
+											ToolTipService.ToolTip="Stop">
+											<Viewbox
+												Width="16"
+												Height="16"
+												Stretch="Uniform">
+												<SymbolIcon Foreground="White" Symbol="Stop" />
+											</Viewbox>
 										</Button>
 
-										<!-- Loop -->
+										<!--  Loop  -->
 										<ToggleButton
-                                            x:Name="LoopToggle"
-                                            Grid.Column="2"
-                                            Style="{StaticResource PlayerChipToggleStyle}"
-                                            Click="LoopToggle_Click">
-											<SymbolIcon Symbol="RepeatAll" Foreground="White" Width="18" Height="18" />
+											x:Name="LoopToggle"
+											Grid.Column="2"
+											Click="LoopToggle_Click"
+											Style="{StaticResource PlayerChipToggleStyle}"
+											ToolTipService.ToolTip="Loop">
+											<Viewbox
+												Width="16"
+												Height="16"
+												Stretch="Uniform">
+												<SymbolIcon Foreground="White" Symbol="RepeatAll" />
+											</Viewbox>
 										</ToggleButton>
 
-										<!-- Mute -->
+										<!--  Mute  -->
 										<ToggleButton
-                                            x:Name="MuteToggle"
-                                            Grid.Column="3"
-                                            Style="{StaticResource PlayerChipToggleStyle}"
-                                            Click="MuteToggle_Click"
-                                            ToolTipService.ToolTip="Mute">
-											<SymbolIcon x:Name="MuteIcon" Symbol="Volume" Foreground="White" Width="18" Height="18" />
+											x:Name="MuteToggle"
+											Grid.Column="3"
+											Click="MuteToggle_Click"
+											Style="{StaticResource PlayerChipToggleStyle}"
+											ToolTipService.ToolTip="Mute">
+											<Viewbox
+												Width="16"
+												Height="16"
+												Stretch="Uniform">
+												<SymbolIcon
+													x:Name="MuteIcon"
+													Foreground="White"
+													Symbol="Volume" />
+											</Viewbox>
 										</ToggleButton>
 
-										<!-- Volume -->
+										<!--  Volume  -->
 										<StackPanel
-                                            Grid.Column="4"
-                                            VerticalAlignment="Center"
-                                            Orientation="Horizontal"
-                                            Spacing="8">
-											<TextBlock FontSize="12" Foreground="White" Text="Vol" />
+											Grid.Column="4"
+											VerticalAlignment="Center"
+											Orientation="Horizontal"
+											Spacing="8">
+											<TextBlock
+												FontSize="12"
+												Foreground="White"
+												Text="Vol" />
 											<Slider
-                                                x:Name="VolumeSlider"
-                                                Width="110"
-                                                Style="{StaticResource PlayerThinSliderStyle}"
-                                                LargeChange="10"
-                                                Maximum="100"
-                                                Minimum="0"
-                                                SmallChange="1"
-                                                SnapsTo="StepValues"
-                                                StepFrequency="1"
-                                                ValueChanged="VolumeSlider_ValueChanged" />
+												x:Name="VolumeSlider"
+												Width="110"
+												LargeChange="10"
+												Maximum="100"
+												Minimum="0"
+												SmallChange="1"
+												SnapsTo="StepValues"
+												StepFrequency="1"
+												Style="{StaticResource PlayerThinSliderStyle}"
+												ValueChanged="VolumeSlider_ValueChanged" />
 										</StackPanel>
 
 										<Grid Grid.Column="5" />
 
-										<!-- Rate -->
+										<!--  Rate  -->
 										<ComboBox
-                                            x:Name="RateCombo"
-                                            Grid.Column="6"
-                                            Width="92"
-                                            Style="{StaticResource PlayerSmallComboStyle}"
-                                            SelectionChanged="RateCombo_SelectionChanged">
+											x:Name="RateCombo"
+											Grid.Column="6"
+											Width="92"
+											SelectionChanged="RateCombo_SelectionChanged"
+											Style="{StaticResource PlayerSmallComboStyle}">
 											<ComboBoxItem Content="0.5x" Tag="0.5" />
-											<ComboBoxItem Content="1.0x" IsSelected="True" Tag="1.0" />
+											<ComboBoxItem
+												Content="1.0x"
+												IsSelected="True"
+												Tag="1.0" />
 											<ComboBoxItem Content="1.25x" Tag="1.25" />
 											<ComboBoxItem Content="1.5x" Tag="1.5" />
 											<ComboBoxItem Content="2.0x" Tag="2.0" />
 										</ComboBox>
 
-										<!-- Full screen -->
+										<!--  Full screen  -->
 										<ToggleButton
-                                            x:Name="FullWindowToggle"
-                                            Grid.Column="7"
-                                            Style="{StaticResource PlayerChipToggleStyle}"
-                                            Click="FullWindowToggle_Click">
-											<SymbolIcon Symbol="FullScreen" Foreground="White" Width="18" Height="18" />
+											x:Name="FullWindowToggle"
+											Grid.Column="7"
+											Click="FullWindowToggle_Click"
+											Style="{StaticResource PlayerChipToggleStyle}"
+											ToolTipService.ToolTip="Full screen">
+											<Viewbox
+												Width="16"
+												Height="16"
+												Stretch="Uniform">
+												<SymbolIcon Foreground="White" Symbol="FullScreen" />
+											</Viewbox>
 										</ToggleButton>
 									</Grid>
 
 								</StackPanel>
 							</Border>
+
 						</Grid>
 					</Border>
 
 					<Border
-                        x:Name="EmptyState"
-                        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
-                        BorderThickness="0"
-                        CornerRadius="16"
-                        Opacity="0.98"
-                        Visibility="Collapsed">
+						x:Name="EmptyState"
+						Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+						BorderThickness="0"
+						CornerRadius="16"
+						Opacity="0.98"
+						Visibility="Collapsed">
 						<StackPanel
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="10">
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							Spacing="10">
 							<TextBlock
-                                HorizontalAlignment="Center"
-                                FontSize="22"
-                                FontWeight="SemiBold"
-                                Text="Pick a folder, then import MP4s" />
+								HorizontalAlignment="Center"
+								FontSize="22"
+								FontWeight="SemiBold"
+								Text="Pick a folder, then import MP4s" />
 							<TextBlock
-                                HorizontalAlignment="Center"
-                                Foreground="{StaticResource TextFaint}"
-                                Text="Select a folder in the left pane, then open Playlist from the menu to browse videos." />
+								HorizontalAlignment="Center"
+								Foreground="{StaticResource TextFaint}"
+								Text="Select a folder in the left pane, then open Playlist from the menu to browse videos." />
 						</StackPanel>
 					</Border>
 				</Grid>
@@ -520,20 +557,20 @@
 				<VisualState x:Name="ControlsVisible">
 					<Storyboard>
 						<DoubleAnimation
-                            Storyboard.TargetName="ControlBar"
-                            Storyboard.TargetProperty="Opacity"
-                            To="1"
-                            Duration="0:0:0.15" />
+							Storyboard.TargetName="ControlBar"
+							Storyboard.TargetProperty="Opacity"
+							To="1"
+							Duration="0:0:0.15" />
 					</Storyboard>
 				</VisualState>
 
 				<VisualState x:Name="ControlsHidden">
 					<Storyboard>
 						<DoubleAnimation
-                            Storyboard.TargetName="ControlBar"
-                            Storyboard.TargetProperty="Opacity"
-                            To="0"
-                            Duration="0:0:0.20" />
+							Storyboard.TargetName="ControlBar"
+							Storyboard.TargetProperty="Opacity"
+							To="0"
+							Duration="0:0:0.20" />
 					</Storyboard>
 				</VisualState>
 			</VisualStateGroup>
@@ -554,6 +591,5 @@
 				</VisualState>
 			</VisualStateGroup>
 		</VisualStateManager.VisualStateGroups>
-
 	</Grid>
 </Page>
