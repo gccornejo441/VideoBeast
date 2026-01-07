@@ -1,5 +1,4 @@
-﻿// MainWindow.xaml.cs
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -7,7 +6,6 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 
 using VideoBeast.Navigation;
@@ -25,43 +23,23 @@ public sealed partial class MainWindow : Window
 {
     public static MainWindow? Instance { get; private set; }
 
-    // Library folder state
     private readonly LibraryFolderService _folderService = new();
-
-    // Import
     private readonly LibraryImportService _importService = new();
-
-    // Playback orchestration
     private readonly PlaybackCoordinator _playback;
-
-    // Status
     private readonly StatusService _status;
-
-    // Guard
     private readonly LibraryGuardService _guard;
-
-    // Search
     private readonly SearchCoordinator _search;
-
-    // Action routing
     private readonly ActionRouter _actions;
 
     private StorageFile? _selectedFile;
-
-    // Settings (player)
     private PlayerSettings _playerSettings = new();
 
-    // AppWindow (window chrome)
     private readonly AppWindow _appWindow;
-
-    // Navigation builder
     private readonly LibraryTreeBuilder _navTreeBuilder;
-
-    // File actions
     private readonly LibraryFileActions _fileActions;
-
-    // Chrome / fullscreen behavior
     private readonly WindowChromeService _chrome;
+
+    private const string PlaylistTag = "view:playlist";
 
     public MainWindow()
     {
@@ -81,7 +59,6 @@ public sealed partial class MainWindow : Window
             playback: _playback,
             searchService: searchService);
 
-        // Router setup
         _actions = new ActionRouter(onError: (_,__) => _status.Show("Action failed.",InfoBarSeverity.Error));
         _actions.Register("action:chooseFolder",ChooseFolderAsync);
         _actions.Register("action:import",ImportAsync);
@@ -89,13 +66,11 @@ public sealed partial class MainWindow : Window
         _actions.Register("action:delete",DeleteSelectedAsync);
         _actions.Register("action:openFolder",OpenFolderAsync);
 
-        // AppWindow
         var hwnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
         _appWindow.Resize(new Windows.Graphics.SizeInt32(1200,740));
 
-        // Chrome Service
         _chrome = new WindowChromeService(
             appWindow: _appWindow,
             dispatcherQueue: DispatcherQueue,
@@ -110,7 +85,6 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(Shell.TitleBar.TitleBarControl);
 
-        // File actions service
         _fileActions = new LibraryFileActions(
             getXamlRoot: () => RootGrid.XamlRoot,
             ensureLibraryFolderAsync: async () => (await _guard.RequireLibraryAsync()) is not null,
@@ -123,7 +97,6 @@ public sealed partial class MainWindow : Window
                     _selectedFile = null;
             });
 
-        // Navigation builder
         _navTreeBuilder = new LibraryTreeBuilder(
             fileFlyoutFactory: (file,item) => CreateFileContextFlyout(file,item),
             onFileRightTapped: (file,item) =>
@@ -133,7 +106,6 @@ public sealed partial class MainWindow : Window
                 _search.Reset();
             });
 
-        // Wire shell events
         Shell.Navigation.Expanding += NavView_Expanding;
         Shell.Navigation.ItemInvoked += NavView_ItemInvoked;
         Shell.Navigation.SelectionChanged += NavView_SelectionChanged;
@@ -143,30 +115,20 @@ public sealed partial class MainWindow : Window
         Shell.TitleBar.PaneToggleRequested += TitleBar_PaneToggleRequested;
         Shell.TitleBar.BackRequested += TitleBar_BackRequested;
 
-        // Search events delegated to SearchCoordinator
         Shell.TitleBar.TextChanged += (s,e) => _search.HandleTextChanged(s,e);
         Shell.TitleBar.SuggestionChosen += (s,e) => _search.HandleSuggestionChosen(s,e);
         Shell.TitleBar.QuerySubmitted += (s,e) => _search.HandleQuerySubmitted(s,e);
 
-        // settings load
         _playerSettings = PlayerSettingsStore.Load();
 
-        // start app
         _ = InitializeLibraryAsync();
         Shell.Frame.Navigate(typeof(VideoBeast.Pages.PlayerPage));
 
         UpdateBackButtonVisibility();
     }
 
-    // still referenced by XAML: Loaded="RootGrid_Loaded"
-    private void RootGrid_Loaded(object sender,RoutedEventArgs e)
-    {
-        // optional: min size, etc.
-    }
+    private void RootGrid_Loaded(object sender,RoutedEventArgs e) { }
 
-    // ---------------------------
-    // Legacy/compat API (Stretch)
-    // ---------------------------
     public static Stretch DefaultPlayerStretch => Stretch.Uniform;
     public static string PlayerStretchSettingKey => "PlayerStretch";
 
@@ -181,9 +143,6 @@ public sealed partial class MainWindow : Window
         _status.Show("Player stretch saved.");
     }
 
-    // ---------------------------
-    // Fullscreen (delegated)
-    // ---------------------------
     public bool IsPlayerFullscreen => _chrome.IsPlayerFullscreen;
 
     public void SetPlayerFullscreen(bool on)
@@ -198,9 +157,6 @@ public sealed partial class MainWindow : Window
         UpdateBackButtonVisibility();
     }
 
-    // ---------------------------
-    // Public API for SettingsPage / PlayerPage
-    // ---------------------------
     public PlayerSettings GetPlayerSettings() => _playerSettings;
 
     public void SavePlayerSettings(PlayerSettings settings)
@@ -221,9 +177,6 @@ public sealed partial class MainWindow : Window
         _status.Show("Player settings saved.");
     }
 
-    // --------------------------------------------------------
-    // NEW: UI delegates for PlayerPage playlist context actions
-    // --------------------------------------------------------
     public async Task PlayFromUiAsync(StorageFile file)
     {
         _selectedFile = file;
@@ -243,9 +196,6 @@ public sealed partial class MainWindow : Window
     public Task DeleteFromUiAsync(StorageFile file)
         => _fileActions.DeleteFileWithConfirmAsync(file);
 
-    // ---------------------------
-    // TitleBar actions
-    // ---------------------------
     private void TitleBar_PaneToggleRequested(TitleBar sender,object args)
     {
         Shell.Navigation.IsPaneOpen = !Shell.Navigation.IsPaneOpen;
@@ -264,13 +214,9 @@ public sealed partial class MainWindow : Window
         Shell.TitleBar.TitleBarControl.IsBackButtonVisible = Shell.Frame.CanGoBack;
     }
 
-    // ---------------------------
-    // Startup / library restore
-    // ---------------------------
     private async Task InitializeLibraryAsync()
     {
         await _folderService.RestoreAsync();
-
         await RebuildNavMenuAsync();
 
         _playback.UpdatePlayerPageUi(
@@ -281,20 +227,35 @@ public sealed partial class MainWindow : Window
         _search.Reset();
     }
 
-    // ---------------------------
-    // Navigation menu building
-    // ---------------------------
-    private Task RebuildNavMenuAsync()
-        => _navTreeBuilder.RebuildAsync(Shell.Navigation,_folderService.LibraryFolder);
+    private void EnsurePlaylistNavItem()
+    {
+        bool exists = Shell.Navigation.MenuItems
+            .OfType<NavigationViewItem>()
+            .Any(i => i.Tag as string == PlaylistTag);
+
+        if (exists) return;
+
+        var playlistItem = new NavigationViewItem
+        {
+            Content = "Playlist",
+            Icon = new SymbolIcon(Symbol.Bullets),
+            Tag = PlaylistTag
+        };
+
+        Shell.Navigation.MenuItems.Insert(0,playlistItem);
+    }
+
+    private async Task RebuildNavMenuAsync()
+    {
+        await _navTreeBuilder.RebuildAsync(Shell.Navigation,_folderService.LibraryFolder);
+        EnsurePlaylistNavItem();
+    }
 
     private async void NavView_Expanding(NavigationView sender,NavigationViewItemExpandingEventArgs args)
     {
         await _navTreeBuilder.HandleExpandingAsync(args);
     }
 
-    // ---------------------------
-    // NavigationView: invoked + settings
-    // ---------------------------
     private void NavView_SelectionChanged(NavigationView sender,NavigationViewSelectionChangedEventArgs args)
     {
         if (args.IsSettingsSelected)
@@ -316,7 +277,20 @@ public sealed partial class MainWindow : Window
         if (args.InvokedItemContainer is not NavigationViewItem nvi)
             return;
 
-        // Action items (routed)
+        if (nvi.Tag is string viewTag && viewTag == PlaylistTag)
+        {
+            var folder = _folderService.SelectedFolder ?? _folderService.LibraryFolder;
+            if (folder is null)
+            {
+                _status.Show("Choose a library folder first.",InfoBarSeverity.Warning);
+                return;
+            }
+
+            Shell.Frame.Navigate(typeof(VideoBeast.Pages.PlaylistPage),folder);
+            UpdateBackButtonVisibility();
+            return;
+        }
+
         if (nvi.Tag is string tagStr && tagStr.StartsWith("action:",StringComparison.Ordinal))
         {
             bool handled = await _actions.TryInvokeAsync(tagStr);
@@ -326,14 +300,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // Folder/file items
         if (nvi.Tag is NodeContent c)
         {
             if (c.File is not null)
             {
                 _selectedFile = c.File;
                 _search.Reset();
-
                 await _playback.RequestPlayAsync(c.File,_playerSettings);
                 return;
             }
@@ -342,13 +314,11 @@ public sealed partial class MainWindow : Window
             {
                 _folderService.SetSelectedFolder(c.Folder);
 
-                if (Shell.Frame.Content is VideoBeast.Pages.PlayerPage page)
-                {
-                    page.SetCurrentFolderText(c.Folder.Path);
+                if (Shell.Frame.Content is VideoBeast.Pages.PlayerPage player)
+                    player.SetCurrentFolderText(c.Folder.Path);
 
-                    // NEW: load playlist panel from the selected folder
-                    await page.LoadFolderAsync(c.Folder);
-                }
+                if (Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+                    await playlist.LoadFolderAsync(c.Folder);
 
                 _status.Show($"Selected folder: {c.Folder.Path}");
                 _search.Reset();
@@ -367,9 +337,6 @@ public sealed partial class MainWindow : Window
             isLibraryMissing: _folderService.LibraryFolder is null);
     }
 
-    // ---------------------------
-    // Routed Actions (Task-based)
-    // ---------------------------
     private async Task ChooseFolderAsync()
     {
         var folder = await _folderService.PickAndStoreLibraryFolderAsync(this);
@@ -384,12 +351,11 @@ public sealed partial class MainWindow : Window
             currentFolderText: folder.Path,
             isLibraryMissing: false);
 
-        // Optional: immediately load playlist for library root
-        if (Shell.Frame.Content is VideoBeast.Pages.PlayerPage page)
-        {
-            page.SetCurrentFolderText(folder.Path);
-            await page.LoadFolderAsync(folder);
-        }
+        if (Shell.Frame.Content is VideoBeast.Pages.PlayerPage player)
+            player.SetCurrentFolderText(folder.Path);
+
+        if (Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+            await playlist.LoadFolderAsync(folder);
 
         _status.Show("Library folder saved.");
         _search.Reset();
@@ -402,9 +368,8 @@ public sealed partial class MainWindow : Window
 
         await RebuildNavMenuAsync();
 
-        // Optional: reload playlist for selected folder if available
-        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlayerPage page)
-            await page.LoadFolderAsync(_folderService.SelectedFolder);
+        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+            await playlist.LoadFolderAsync(_folderService.SelectedFolder);
 
         _status.Show("Library refreshed.");
         _search.Reset();
@@ -426,9 +391,8 @@ public sealed partial class MainWindow : Window
                 currentFolderText: _folderService.LibraryFolder?.Path ?? "No folder selected",
                 isLibraryMissing: false);
 
-            // If a folder is selected, refresh playlist
-            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlayerPage page)
-                await page.LoadFolderAsync(_folderService.SelectedFolder);
+            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+                await playlist.LoadFolderAsync(_folderService.SelectedFolder);
         }
 
         _status.Show(result.Message,result.Severity);
@@ -449,9 +413,8 @@ public sealed partial class MainWindow : Window
         await _fileActions.DeleteFileWithConfirmAsync(_selectedFile);
         _search.Reset();
 
-        // If we deleted from the selected folder, refresh playlist
-        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlayerPage page)
-            await page.LoadFolderAsync(_folderService.SelectedFolder);
+        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+            await playlist.LoadFolderAsync(_folderService.SelectedFolder);
     }
 
     private async Task OpenFolderAsync()
@@ -462,9 +425,6 @@ public sealed partial class MainWindow : Window
         await Launcher.LaunchFolderAsync(library);
     }
 
-    // ---------------------------
-    // Drag & Drop import
-    // ---------------------------
     private void RootGrid_DragOver(object sender,DragEventArgs e)
     {
         if (e.DataView.Contains(StandardDataFormats.StorageItems))
@@ -491,18 +451,14 @@ public sealed partial class MainWindow : Window
                 currentFolderText: _folderService.LibraryFolder?.Path ?? "No folder selected",
                 isLibraryMissing: false);
 
-            // Refresh playlist for current folder
-            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlayerPage page)
-                await page.LoadFolderAsync(_folderService.SelectedFolder);
+            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+                await playlist.LoadFolderAsync(_folderService.SelectedFolder);
         }
 
         _status.Show(result.Message,result.Severity);
         _search.Reset();
     }
 
-    // ---------------------------
-    // Context menu (NavigationView items)
-    // ---------------------------
     private MenuFlyout CreateFileContextFlyout(StorageFile file,NavigationViewItem owningItem)
     {
         var flyout = new MenuFlyout();

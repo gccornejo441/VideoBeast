@@ -10,7 +10,6 @@
 
 				<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
 
-				<!--  your app resources  -->
 				<ResourceDictionary>
 
 					<!--  Card surfaces  -->
@@ -37,6 +36,7 @@
 						<Setter Property="CornerRadius" Value="10" />
 					</Style>
 				</ResourceDictionary>
+				<ResourceDictionary Source="ms-appx:///Styles/PlaylistStyles.xaml" />
 
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>

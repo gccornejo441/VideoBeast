@@ -14,7 +14,9 @@
     <None Remove="Controls\AppShell.xaml" />
     <None Remove="Controls\AppTitleBar.xaml" />
     <None Remove="Pages\PlayerPage.xaml" />
+    <None Remove="Pages\PlaylistPage.xaml" />
     <None Remove="Pages\SettingsPage.xaml" />
+    <None Remove="Styles\PlaylistStyles.xaml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +27,12 @@
     <PackageReference Include="CommunityToolkit.WinUI.Controls.Sizers" Version="8.2.251219" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7175" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.251106002" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Pages\PlaylistPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <ItemGroup>
@@ -47,6 +55,12 @@
 
   <ItemGroup>
     <Page Update="Controls\AppTitleBar.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Styles\PlaylistStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

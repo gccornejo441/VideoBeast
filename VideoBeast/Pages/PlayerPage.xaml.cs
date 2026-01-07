@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 
 using Microsoft.UI;
@@ -15,12 +11,9 @@ using Microsoft.UI.Xaml.Media;
 
 using VideoBeast.Converters;
 
-using Windows.ApplicationModel.DataTransfer;
-using Windows.Foundation;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage;
-using Windows.Storage.Search;
 using Windows.System;
 using Windows.UI;
 
@@ -30,9 +23,6 @@ public sealed partial class PlayerPage : Page
 {
     private readonly DispatcherTimer _uiTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private readonly DispatcherTimer _hideTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
-
-    // Playlist filter debounce
-    private readonly DispatcherTimer _filterDebounce = new() { Interval = TimeSpan.FromMilliseconds(250) };
 
     private readonly MediaPlayer _mp = new();
 
@@ -59,16 +49,6 @@ public sealed partial class PlayerPage : Page
     private readonly VolumeThumbToolTipConverter _volumeToolTipConverter = new();
     private readonly SeekThumbToolTipValueConverter _seekToolTipConverter = new();
 
-    // Playlist state
-    private StorageFolder? _playlistFolder;
-    private string _playlistFilter = "";
-    private Mp4FolderIncrementalSource? _playlistSource;
-    private int _ensureNowPlayingRunId;
-
-    // NEW: Allow MainWindow to request folder load before PlayerPage is Loaded
-    private StorageFolder? _pendingFolderToLoad;
-    private bool _pendingPreserveSelection;
-
     public PlayerPage()
     {
         InitializeComponent();
@@ -94,13 +74,7 @@ public sealed partial class PlayerPage : Page
         _uiTimer.Tick += (_,__) => SyncUiFromPlayer();
         _hideTimer.Tick += (_,__) => HideControlsIfAllowed();
 
-        _filterDebounce.Tick += async (_,__) =>
-        {
-            _filterDebounce.Stop();
-            await RefreshPlaylistAsync(preserveSelection: true);
-        };
-
-        Loaded += async (_,__) =>
+        Loaded += (_,__) =>
         {
             _isActive = true;
 
@@ -113,28 +87,17 @@ public sealed partial class PlayerPage : Page
             ApplyFullScreen(_settings.IsFullWindow,useTransitions: false);
             RestartHideTimer();
 
-            // NEW: If MainWindow called LoadFolderAsync before we loaded, honor it now.
-            if (_pendingFolderToLoad is not null)
-            {
-                var folder = _pendingFolderToLoad;
-                var preserve = _pendingPreserveSelection;
-                _pendingFolderToLoad = null;
+            ShowEmptyState(_mp.Source is null);
 
-                await LoadPlaylistFromFolderAsync(folder,preserveSelection: preserve);
-                ShowEmptyState(_mp.Source is null);
-                return;
-            }
-
-            // Existing behavior: if only a path was set before load, hydrate playlist from path.
-            if (!string.IsNullOrWhiteSpace(_currentFolderPath))
-                await LoadPlaylistFromPathAsync(_currentFolderPath,preserveSelection: false);
+            // Ensure tooltips reflect initial toggle state
+            UpdateDynamicToolTips();
+            UpdatePlayPauseUi();
         };
 
         Unloaded += (_,__) =>
         {
             _isActive = false;
 
-            _filterDebounce.Stop();
             _hideTimer.Stop();
             _uiTimer.Stop();
 
@@ -164,40 +127,9 @@ public sealed partial class PlayerPage : Page
 
     public void SetStretch(Stretch stretch) => Player.Stretch = stretch;
 
-    /// <summary>
-    /// Called by MainWindow when a folder is selected in the left nav.
-    /// This also drives the playlist contents on the right.
-    /// </summary>
     public void SetCurrentFolderText(string text)
     {
         _currentFolderPath = text ?? "";
-
-        // Fire and forget (safe even if called frequently).
-        _ = LoadPlaylistFromPathAsync(_currentFolderPath,preserveSelection: false);
-    }
-
-    // ----------------------------------------------------
-    // NEW: MainWindow expects these methods to exist
-    // ----------------------------------------------------
-    public Task LoadFolderAsync(StorageFolder folder)
-        => LoadFolderAsync(folder,preserveSelection: false);
-
-    public async Task LoadFolderAsync(StorageFolder folder,bool preserveSelection)
-    {
-        if (folder is null) return;
-
-        _currentFolderPath = folder.Path ?? _currentFolderPath;
-
-        // If page isn't ready yet, remember the request for Loaded handler.
-        if (!_isActive || !IsLoaded)
-        {
-            _pendingFolderToLoad = folder;
-            _pendingPreserveSelection = preserveSelection;
-            return;
-        }
-
-        await LoadPlaylistFromFolderAsync(folder,preserveSelection);
-        ShowEmptyState(_mp.Source is null);
     }
 
     protected override void OnKeyDown(KeyRoutedEventArgs e)
@@ -209,6 +141,8 @@ public sealed partial class PlayerPage : Page
 
             ApplyFullScreen(false,useTransitions: true);
             PersistSettings();
+
+            UpdateDynamicToolTips();
 
             e.Handled = true;
             return;
@@ -303,6 +237,9 @@ public sealed partial class PlayerPage : Page
         else
             VisualStateManager.GoToState(this,_settings.IsFullWindow ? "PlayerFullWindow" : "PlayerNormal",false);
 
+        // EXACT place #1: after setting IsChecked values (ApplySettings)
+        UpdateDynamicToolTips();
+
         RestartHideTimer();
     }
 
@@ -331,313 +268,11 @@ public sealed partial class PlayerPage : Page
         SetControlsVisible(true);
         RestartHideTimer();
 
-        // Now Playing highlight even when playlist hasn't loaded that far yet.
-        _ = EnsureNowPlayingSelectedAsync(_nowPlayingPath);
-
         if (_settings.AutoPlay)
         {
             try { _mp.Play(); } catch { }
         }
     }
-
-    // ---------------------------
-    // Playlist
-    // ---------------------------
-
-    private async Task LoadPlaylistFromPathAsync(string folderPath,bool preserveSelection)
-    {
-        if (!_isActive && !IsLoaded)
-            return;
-
-        if (string.IsNullOrWhiteSpace(folderPath))
-        {
-            _playlistFolder = null;
-            _playlistSource = null;
-            RunOnUI(() =>
-            {
-                FilesList.ItemsSource = null;
-                PlaylistTitle.Text = "Videos";
-            });
-            ShowEmptyState(true);
-            return;
-        }
-
-        try
-        {
-            var folder = await StorageFolder.GetFolderFromPathAsync(folderPath);
-            await LoadPlaylistFromFolderAsync(folder,preserveSelection);
-            ShowEmptyState(_mp.Source is null); // still show empty overlay until something plays
-        }
-        catch
-        {
-            // Access/path failed
-            _playlistFolder = null;
-            _playlistSource = null;
-            RunOnUI(() =>
-            {
-                FilesList.ItemsSource = null;
-                PlaylistTitle.Text = "Videos";
-            });
-        }
-    }
-
-    private async Task LoadPlaylistFromFolderAsync(StorageFolder folder,bool preserveSelection)
-    {
-        _playlistFolder = folder;
-
-        var selectedPath = preserveSelection
-            ? (FilesList.SelectedItem as StorageFile)?.Path
-            : null;
-
-        RunOnUI(() =>
-        {
-            PlaylistTitle.Text = folder.Name;
-        });
-
-        _playlistSource = new Mp4FolderIncrementalSource(folder,() => _playlistFilter);
-
-        RunOnUI(() =>
-        {
-            FilesList.ItemsSource = _playlistSource;
-        });
-
-        // Preload the first page so the list isn't blank until you scroll.
-        try { await _playlistSource.LoadNextPageAsync(); } catch { }
-
-        if (!string.IsNullOrWhiteSpace(_nowPlayingPath))
-        {
-            // Prefer now-playing selection
-            await EnsureNowPlayingSelectedAsync(_nowPlayingPath);
-        }
-        else if (!string.IsNullOrWhiteSpace(selectedPath))
-        {
-            await EnsureNowPlayingSelectedAsync(selectedPath);
-        }
-    }
-
-    private async Task RefreshPlaylistAsync(bool preserveSelection)
-    {
-        if (_playlistFolder is null) return;
-        await LoadPlaylistFromFolderAsync(_playlistFolder,preserveSelection);
-    }
-
-    private async Task EnsureNowPlayingSelectedAsync(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath)) return;
-        if (_playlistSource is null) return;
-
-        var runId = ++_ensureNowPlayingRunId;
-
-        // If filter is active and excludes the now playing item, we won't find it.
-        // We do NOT auto-clear your filter; we just try.
-        for (int i = 0; i < 200; i++) // hard cap to avoid infinite loops
-        {
-            if (runId != _ensureNowPlayingRunId) return;
-
-            var match = _playlistSource.FirstOrDefault(f =>
-                string.Equals(f.Path,filePath,StringComparison.OrdinalIgnoreCase));
-
-            if (match is not null)
-            {
-                RunOnUI(() =>
-                {
-                    FilesList.SelectedItem = match;
-                    FilesList.ScrollIntoView(match);
-                });
-                return;
-            }
-
-            if (!_playlistSource.HasMoreItems) return;
-
-            try { await _playlistSource.LoadNextPageAsync(); }
-            catch { return; }
-        }
-    }
-
-    private void PlaylistToggle_Click(object sender,RoutedEventArgs e)
-    {
-        var on = PlaylistToggle.IsChecked == true;
-
-        PlaylistPanel.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        PlaylistSplitter.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-
-        SetControlsVisible(true);
-        RestartHideTimer();
-    }
-
-    private async void PlaylistRefresh_Click(object sender,RoutedEventArgs e)
-    {
-        await RefreshPlaylistAsync(preserveSelection: true);
-    }
-
-    private void PlaylistFilterBox_TextChanged(object sender,TextChangedEventArgs e)
-    {
-        _playlistFilter = PlaylistFilterBox.Text ?? "";
-
-        // debounce refresh
-        _filterDebounce.Stop();
-        _filterDebounce.Start();
-    }
-
-    private void FilesList_ItemClick(object sender,ItemClickEventArgs e)
-    {
-        if (e.ClickedItem is not StorageFile file) return;
-
-        var settings = MainWindow.Instance?.GetPlayerSettings() ?? _settings ?? new PlayerSettings();
-        Play(file,settings);
-    }
-
-    // Context menu helpers
-    private StorageFile? GetFileFromMenuSender(object sender)
-    {
-        if (sender is FrameworkElement fe && fe.DataContext is StorageFile f1) return f1;
-        if (sender is MenuFlyoutItem mfi && mfi.DataContext is StorageFile f2) return f2;
-        return null;
-    }
-
-    private void SelectPlaylistFile(StorageFile file)
-    {
-        FilesList.SelectedItem = file;
-        FilesList.ScrollIntoView(file);
-    }
-
-    private void Playlist_Play_Click(object sender,RoutedEventArgs e)
-    {
-        var file = GetFileFromMenuSender(sender);
-        if (file is null) return;
-
-        SelectPlaylistFile(file);
-
-        var settings = MainWindow.Instance?.GetPlayerSettings() ?? _settings ?? new PlayerSettings();
-        Play(file,settings);
-    }
-
-    private async void Playlist_ShowInFolder_Click(object sender,RoutedEventArgs e)
-    {
-        var file = GetFileFromMenuSender(sender);
-        if (file is null) return;
-
-        SelectPlaylistFile(file);
-
-        try
-        {
-            var parent = await file.GetParentAsync();
-            if (parent is not null)
-            {
-                var opts = new FolderLauncherOptions();
-                opts.ItemsToSelect.Add(file);
-                await Launcher.LaunchFolderAsync(parent,opts);
-            }
-        }
-        catch { }
-    }
-
-    private void Playlist_CopyPath_Click(object sender,RoutedEventArgs e)
-    {
-        var file = GetFileFromMenuSender(sender);
-        if (file is null) return;
-
-        SelectPlaylistFile(file);
-
-        try
-        {
-            var dp = new DataPackage();
-            dp.SetText(file.Path ?? "");
-            Clipboard.SetContent(dp);
-        }
-        catch { }
-    }
-
-    private async void Playlist_Rename_Click(object sender,RoutedEventArgs e)
-    {
-        var file = GetFileFromMenuSender(sender);
-        if (file is null) return;
-
-        SelectPlaylistFile(file);
-
-        var tb = new TextBox
-        {
-            Text = file.DisplayName,
-            PlaceholderText = "New name (no extension)",
-            MinWidth = 320
-        };
-
-        var dlg = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = "Rename video",
-            PrimaryButtonText = "Rename",
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Primary,
-            Content = tb
-        };
-
-        var result = await dlg.ShowAsync();
-        if (result != ContentDialogResult.Primary) return;
-
-        var newName = (tb.Text ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(newName)) return;
-
-        try
-        {
-            // Keep extension
-            var ext = file.FileType ?? ".mp4";
-            await file.RenameAsync(newName + ext,NameCollisionOption.FailIfExists);
-
-            // If we were playing this file, update now-playing path/name
-            if (!string.IsNullOrWhiteSpace(_nowPlayingPath) &&
-                string.Equals(_nowPlayingPath,file.Path,StringComparison.OrdinalIgnoreCase))
-            {
-                _nowPlayingName = file.DisplayName ?? "";
-                _nowPlayingPath = file.Path ?? "";
-            }
-
-            await RefreshPlaylistAsync(preserveSelection: true);
-        }
-        catch { }
-    }
-
-    private async void Playlist_Delete_Click(object sender,RoutedEventArgs e)
-    {
-        var file = GetFileFromMenuSender(sender);
-        if (file is null) return;
-
-        SelectPlaylistFile(file);
-
-        var dlg = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = "Delete video?",
-            Content = $"Delete \"{file.Name}\" from disk?",
-            PrimaryButtonText = "Delete",
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Close
-        };
-
-        var result = await dlg.ShowAsync();
-        if (result != ContentDialogResult.Primary) return;
-
-        try
-        {
-            var deletingPath = file.Path ?? "";
-
-            // Stop playback if deleting the currently playing file
-            if (!string.IsNullOrWhiteSpace(deletingPath) &&
-                string.Equals(deletingPath,_nowPlayingPath,StringComparison.OrdinalIgnoreCase))
-            {
-                StopAndShowEmpty();
-            }
-
-            await file.DeleteAsync(StorageDeleteOption.Default);
-
-            await RefreshPlaylistAsync(preserveSelection: false);
-        }
-        catch { }
-    }
-
-    // ---------------------------
-    // Media events / UI sync
-    // ---------------------------
 
     private void PlaybackSession_NaturalDurationChanged(MediaPlaybackSession sender,object args)
     {
@@ -803,6 +438,9 @@ public sealed partial class PlayerPage : Page
         var on = LoopToggle.IsChecked == true;
         _settings.IsLoopingEnabled = on;
         _mp.IsLoopingEnabled = on;
+
+        // EXACT place #2: right after the toggle state is known/updated
+        UpdateDynamicToolTips();
 
         PersistSettings();
         SetControlsVisible(true);
@@ -970,6 +608,9 @@ public sealed partial class PlayerPage : Page
 
         UpdateMuteIcon();
         UpdatePlayPauseUi();
+
+        // Keeps Loop/FullScreen tooltips accurate even when state changes indirectly
+        UpdateDynamicToolTips();
     }
 
     private void SetVolumeSliderUIFromSettings()
@@ -982,8 +623,14 @@ public sealed partial class PlayerPage : Page
     private void UpdatePlayPauseUi()
     {
         var isPlaying = _mp.PlaybackSession?.PlaybackState == MediaPlaybackState.Playing;
+
         PlayPauseIcon.Symbol = isPlaying ? Symbol.Pause : Symbol.Play;
+
+        // Keep your existing logic intact (PlayPauseText exists, but is collapsed in XAML)
         PlayPauseText.Text = isPlaying ? "Pause" : "Play";
+
+        // Nice-to-have: tooltip matches state (doesn't affect your logic)
+        ToolTipService.SetToolTip(PlayPauseButton,isPlaying ? "Pause" : "Play");
     }
 
     private void UpdateMuteIcon()
@@ -1048,6 +695,9 @@ public sealed partial class PlayerPage : Page
         _settings.IsFullWindow = on;
         ApplyFullScreen(on,useTransitions: true);
 
+        // EXACT place #3: right after setting full screen state
+        UpdateDynamicToolTips();
+
         PersistSettings();
         SetControlsVisible(true);
         RestartHideTimer();
@@ -1056,6 +706,17 @@ public sealed partial class PlayerPage : Page
     private void PersistSettings()
     {
         MainWindow.Instance?.SavePlayerSettings(_settings);
+    }
+
+    /// <summary>
+    /// This is the exact place + method that implements:
+    /// ToolTipService.SetToolTip(LoopToggle, LoopToggle.IsChecked == true ? "Loop: On" : "Loop: Off");
+    /// ToolTipService.SetToolTip(FullWindowToggle, FullWindowToggle.IsChecked == true ? "Exit full screen" : "Full screen");
+    /// </summary>
+    private void UpdateDynamicToolTips()
+    {
+        ToolTipService.SetToolTip(LoopToggle,LoopToggle.IsChecked == true ? "Loop: On" : "Loop: Off");
+        ToolTipService.SetToolTip(FullWindowToggle,FullWindowToggle.IsChecked == true ? "Exit full screen" : "Full screen");
     }
 
     private static double Clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
@@ -1127,11 +788,6 @@ public sealed partial class PlayerPage : Page
         _pointerOverControls = false;
         RestartHideTimer();
     }
-
-    // ---------------------------
-    // Private helper types
-    // ---------------------------
-
     private sealed class SeekThumbToolTipValueConverter : IValueConverter
     {
         public double DurationSeconds { get; set; }
@@ -1155,105 +811,5 @@ public sealed partial class PlayerPage : Page
 
         public object ConvertBack(object value,Type targetType,object parameter,string language)
             => throw new NotSupportedException();
-    }
-
-    /// <summary>
-    /// Incremental-loading source for MP4 files in a folder.
-    /// ListView will call LoadMoreItemsAsync as you scroll.
-    /// </summary>
-    private sealed class Mp4FolderIncrementalSource : ObservableCollection<StorageFile>, ISupportIncrementalLoading
-    {
-        private readonly StorageFolder _folder;
-        private readonly Func<string> _getFilter;
-        private readonly HashSet<string> _seen = new(StringComparer.OrdinalIgnoreCase);
-
-        private uint _offset;
-        private bool _hasMore = true;
-
-        // Tune this based on your typical folder sizes.
-        private const uint PageSize = 60;
-
-        public Mp4FolderIncrementalSource(StorageFolder folder,Func<string> getFilter)
-        {
-            _folder = folder;
-            _getFilter = getFilter ?? (() => "");
-        }
-
-        public bool HasMoreItems => _hasMore;
-
-        public async Task LoadNextPageAsync()
-        {
-            if (!_hasMore) return;
-            await LoadInternalAsync(PageSize);
-        }
-
-        public IAsyncOperation<LoadMoreItemsResult> LoadMoreItemsAsync(uint count)
-        {
-            var want = count > 0 ? Math.Max(PageSize,count) : PageSize;
-
-            return AsyncInfo.Run(async ct =>
-            {
-                uint added = await LoadInternalAsync(want,ct);
-                return new LoadMoreItemsResult { Count = added };
-            });
-        }
-
-        private async Task<uint> LoadInternalAsync(uint want,System.Threading.CancellationToken ct = default)
-        {
-            if (!_hasMore) return 0;
-
-            IReadOnlyList<StorageFile> files;
-
-            try
-            {
-                // Pull a page of files (all types), then filter down to mp4 + search text.
-                files = await _folder.GetFilesAsync(CommonFileQuery.OrderByName,_offset,want);
-            }
-            catch
-            {
-                _hasMore = false;
-                return 0;
-            }
-
-            _offset += (uint)files.Count;
-
-            if (files.Count < want)
-                _hasMore = false;
-
-            var filter = (_getFilter() ?? "").Trim();
-            var hasFilter = !string.IsNullOrWhiteSpace(filter);
-            var filterLower = hasFilter ? filter.ToLowerInvariant() : "";
-
-            uint added = 0;
-
-            foreach (var f in files)
-            {
-                if (ct.IsCancellationRequested) break;
-
-                if (!string.Equals(f.FileType,".mp4",StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var path = f.Path ?? "";
-                if (path.Length == 0) continue;
-
-                if (!_seen.Add(path))
-                    continue;
-
-                if (hasFilter)
-                {
-                    // match on Name or DisplayName
-                    var name = (f.Name ?? "");
-                    var disp = (f.DisplayName ?? "");
-                    if (!name.ToLowerInvariant().Contains(filterLower) &&
-                        !disp.ToLowerInvariant().Contains(filterLower))
-                        continue;
-                }
-
-                Add(f);
-                added++;
-            }
-
-            return added;
-        }
     }
 }

@@ -1,0 +1,55 @@
+<ResourceDictionary
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mux="using:Microsoft.UI.Xaml">
+
+	<Style x:Key="PlaylistListViewItemStyle" TargetType="ListViewItem">
+		<Setter Property="Padding" Value="0" />
+		<Setter Property="Margin" Value="0,2" />
+		<Setter Property="HorizontalContentAlignment" Value="Stretch" />
+		<Setter Property="Background" Value="Transparent" />
+		<Setter Property="BorderThickness" Value="1" />
+		<Setter Property="BorderBrush" Value="Transparent" />
+
+		<Setter Property="Template">
+			<Setter.Value>
+				<ControlTemplate TargetType="ListViewItem">
+					<ListViewItemPresenter
+						x:Name="Root"
+						Margin="{TemplateBinding Margin}"
+						Padding="{TemplateBinding Padding}"
+						HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+						VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+						Background="{TemplateBinding Background}"
+						BorderBrush="{TemplateBinding BorderBrush}"
+						BorderThickness="{TemplateBinding BorderThickness}"
+						Content="{TemplateBinding Content}"
+						ContentTemplate="{TemplateBinding ContentTemplate}"
+						CornerRadius="10"
+						PointerOverBackground="#1AFFFFFF"
+						PointerOverBorderBrush="#33FFFFFF"
+						SelectedBackground="#222222"
+						SelectedBorderBrush="#666666"
+						SelectedPointerOverBackground="#222222"
+						SelectedPointerOverBorderBrush="#666666">
+						<VisualStateManager.VisualStateGroups>
+							<VisualStateGroup x:Name="NowPlayingStates">
+								<VisualState x:Name="NotNowPlaying" />
+
+								<VisualState x:Name="NowPlaying">
+									<VisualState.StateTriggers>
+										<mux:StateTrigger IsActive="{Binding IsNowPlaying}" />
+									</VisualState.StateTriggers>
+									<VisualState.Setters>
+										<Setter Target="Root.Background" Value="#2A2F3A" />
+										<Setter Target="Root.BorderBrush" Value="#4C89FF" />
+									</VisualState.Setters>
+								</VisualState>
+							</VisualStateGroup>
+						</VisualStateManager.VisualStateGroups>
+					</ListViewItemPresenter>
+				</ControlTemplate>
+			</Setter.Value>
+		</Setter>
+	</Style>
+</ResourceDictionary>
