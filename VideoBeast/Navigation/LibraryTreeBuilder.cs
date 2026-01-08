@@ -29,14 +29,13 @@ public sealed class LibraryTreeBuilder
     {
         nav.MenuItems.Clear();
 
-        // Library header
         nav.MenuItems.Add(new NavigationViewItemHeader { Content = "Library" });
 
         if (libraryFolder is null)
         {
             nav.MenuItems.Add(new NavigationViewItem
             {
-                Content = "No folder selected",
+                Content = "No Folder Selected",
                 IsEnabled = false,
                 Icon = new SymbolIcon(Symbol.Folder)
             });
@@ -51,17 +50,14 @@ public sealed class LibraryTreeBuilder
             nav.MenuItems.Add(root);
         }
 
-        // Separator
         nav.MenuItems.Add(new NavigationViewItemSeparator());
 
-        // Actions header
-        nav.MenuItems.Add(new NavigationViewItemHeader { Content = "Actions" });
+        nav.MenuItems.Add(new NavigationViewItemHeader { Content = "Commands" });
 
-        nav.MenuItems.Add(CreateActionItem("Choose folder",Symbol.Folder,"action:chooseFolder"));
-        nav.MenuItems.Add(CreateActionItem("Import MP4",Symbol.Add,"action:import"));
-        nav.MenuItems.Add(CreateActionItem("Refresh",Symbol.Refresh,"action:refresh"));
-        nav.MenuItems.Add(CreateActionItem("Delete selected",Symbol.Delete,"action:delete"));
-        nav.MenuItems.Add(CreateActionItem("Open folder",Symbol.OpenFile,"action:openFolder"));
+        nav.MenuItems.Add(CreateActionItem("Choose Folder…",Symbol.Folder,"action:chooseFolder"));
+        nav.MenuItems.Add(CreateActionItem("Import…",Symbol.Add,"action:import"));
+        nav.MenuItems.Add(CreateActionItem("Reload",Symbol.Refresh,"action:refresh"));
+        nav.MenuItems.Add(CreateActionItem("Show in Finder",Symbol.OpenFile,"action:openFolder"));
     }
 
     public async Task HandleExpandingAsync(NavigationViewItemExpandingEventArgs args)
@@ -72,7 +68,6 @@ public sealed class LibraryTreeBuilder
         if (nvi.Tag is not NodeContent c || c.Folder is null)
             return;
 
-        // lazy-load if placeholder present
         if (nvi.MenuItems.Count == 1
             && nvi.MenuItems[0] is NavigationViewItem ph
             && ph.Tag is string s
@@ -102,7 +97,6 @@ public sealed class LibraryTreeBuilder
             Tag = new NodeContent(folder.Name,Symbol.Folder,folder,null)
         };
 
-        // Placeholder for chevron + lazy load
         item.MenuItems.Add(new NavigationViewItem
         {
             Content = "Loading…",
@@ -122,15 +116,11 @@ public sealed class LibraryTreeBuilder
             Tag = new NodeContent(file.Name,Symbol.Video,null,file)
         };
 
-        // Optional context flyout
         if (_fileFlyoutFactory is not null)
             item.ContextFlyout = _fileFlyoutFactory(file,item);
 
-        // Optional right-click selection hook
         if (_onFileRightTapped is not null)
-        {
             item.RightTapped += (_,__) => _onFileRightTapped(file,item);
-        }
 
         return item;
     }
@@ -151,7 +141,7 @@ public sealed class LibraryTreeBuilder
         {
             folderItem.MenuItems.Add(new NavigationViewItem
             {
-                Content = "Access denied",
+                Content = "Access Denied",
                 IsEnabled = false
             });
             return;
@@ -171,7 +161,7 @@ public sealed class LibraryTreeBuilder
         {
             folderItem.MenuItems.Add(new NavigationViewItem
             {
-                Content = "(empty)",
+                Content = "Empty",
                 IsEnabled = false
             });
         }

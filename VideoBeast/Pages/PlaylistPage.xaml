@@ -75,14 +75,20 @@
 			</Setter>
 		</Style>
 
-		<MenuFlyout x:Key="PlaylistFileFlyout">
-			<MenuFlyoutItem Click="Playlist_Play_Click" Text="Play">
+		<MenuFlyout x:Key="PlaylistFileFlyout" Opening="PlaylistFileFlyout_Opening">
+			<MenuFlyoutItem
+                x:Name="FlyoutPlay"
+                Click="Playlist_Play_Click"
+                Text="Play">
 				<MenuFlyoutItem.Icon>
 					<SymbolIcon Symbol="Play" />
 				</MenuFlyoutItem.Icon>
 			</MenuFlyoutItem>
 
-			<MenuFlyoutItem Click="Playlist_ShowInFolder_Click" Text="Show in folder">
+			<MenuFlyoutItem
+                x:Name="FlyoutShowInFinder"
+                Click="Playlist_ShowInFinder_Click"
+                Text="Show in Finder">
 				<MenuFlyoutItem.Icon>
 					<SymbolIcon Symbol="Find" />
 				</MenuFlyoutItem.Icon>
@@ -90,13 +96,19 @@
 
 			<MenuFlyoutSeparator />
 
-			<MenuFlyoutItem Click="Playlist_CopyPath_Click" Text="Copy path">
+			<MenuFlyoutItem
+                x:Name="FlyoutCopyPathname"
+                Click="Playlist_CopyPath_Click"
+                Text="Copy Pathname">
 				<MenuFlyoutItem.Icon>
 					<SymbolIcon Symbol="Copy" />
 				</MenuFlyoutItem.Icon>
 			</MenuFlyoutItem>
 
-			<MenuFlyoutItem Click="Playlist_Rename_Click" Text="Rename">
+			<MenuFlyoutItem
+                x:Name="FlyoutRename"
+                Click="Playlist_Rename_Click"
+                Text="Rename…">
 				<MenuFlyoutItem.Icon>
 					<SymbolIcon Symbol="Edit" />
 				</MenuFlyoutItem.Icon>
@@ -104,7 +116,10 @@
 
 			<MenuFlyoutSeparator />
 
-			<MenuFlyoutItem Click="Playlist_Delete_Click" Text="Delete">
+			<MenuFlyoutItem
+                x:Name="FlyoutMoveToTrash"
+                Click="Playlist_MoveToTrash_Click"
+                Text="Move to Trash">
 				<MenuFlyoutItem.Icon>
 					<SymbolIcon Symbol="Delete" />
 				</MenuFlyoutItem.Icon>
@@ -125,9 +140,16 @@
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
 
-			<TextBlock x:Name="PlaylistTitle" FontSize="18" FontWeight="SemiBold" Text="Playlist"/>
+			<TextBlock
+                x:Name="PlaylistTitle"
+                FontSize="18"
+                FontWeight="SemiBold"
+                Text="Up Next" />
 
-			<Button Grid.Column="1" Click="PlaylistRefresh_Click" ToolTipService.ToolTip="Refresh folder">
+			<Button
+                Grid.Column="1"
+                Click="PlaylistRefresh_Click"
+                ToolTipService.ToolTip="Reload">
 				<SymbolIcon Symbol="Refresh"/>
 			</Button>
 		</Grid>
@@ -135,7 +157,7 @@
 		<TextBox
             x:Name="PlaylistFilterBox"
             Grid.Row="1"
-            PlaceholderText="Filter videos…"
+            PlaceholderText="Search"
             TextChanged="PlaylistFilterBox_TextChanged" />
 
 		<ListView

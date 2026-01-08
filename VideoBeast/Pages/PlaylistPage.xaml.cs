@@ -41,7 +41,7 @@ public sealed partial class PlaylistPage : Page
 
         if (_folder is null)
         {
-            PlaylistTitle.Text = "Playlist";
+            PlaylistTitle.Text = "Up Next";
             return;
         }
 
@@ -71,8 +71,8 @@ public sealed partial class PlaylistPage : Page
         }
 
         PlaylistTitle.Text = _folder is null
-            ? "Playlist"
-            : $"{_folder.Name} ({_filtered.Count})";
+            ? "Up Next"
+            : $"{_folder.Name} • {_filtered.Count}";
     }
 
     private async void FilesList_ItemClick(object sender,ItemClickEventArgs e)
@@ -95,13 +95,24 @@ public sealed partial class PlaylistPage : Page
 
     private StorageFile? SelectedFile => FilesList.SelectedItem as StorageFile;
 
+    private void PlaylistFileFlyout_Opening(object sender,object e)
+    {
+        bool hasSelection = SelectedFile is not null;
+
+        FlyoutPlay.IsEnabled = hasSelection;
+        FlyoutShowInFinder.IsEnabled = hasSelection;
+        FlyoutCopyPathname.IsEnabled = hasSelection;
+        FlyoutRename.IsEnabled = hasSelection;
+        FlyoutMoveToTrash.IsEnabled = hasSelection;
+    }
+
     private async void Playlist_Play_Click(object sender,RoutedEventArgs e)
     {
         if (SelectedFile is null || MainWindow.Instance is null) return;
         await MainWindow.Instance.PlayFromUiAsync(SelectedFile);
     }
 
-    private async void Playlist_ShowInFolder_Click(object sender,RoutedEventArgs e)
+    private async void Playlist_ShowInFinder_Click(object sender,RoutedEventArgs e)
     {
         if (SelectedFile is null || MainWindow.Instance is null) return;
         await MainWindow.Instance.ShowInFolderFromUiAsync(SelectedFile);
@@ -120,7 +131,7 @@ public sealed partial class PlaylistPage : Page
         await LoadFolderAsync(_folder);
     }
 
-    private async void Playlist_Delete_Click(object sender,RoutedEventArgs e)
+    private async void Playlist_MoveToTrash_Click(object sender,RoutedEventArgs e)
     {
         if (SelectedFile is null || MainWindow.Instance is null) return;
         await MainWindow.Instance.DeleteFromUiAsync(SelectedFile);

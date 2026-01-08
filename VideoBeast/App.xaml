@@ -1,8 +1,8 @@
 <Application
-	x:Class="VideoBeast.App"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:local="using:VideoBeast">
+    x:Class="VideoBeast.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:VideoBeast">
 
 	<Application.Resources>
 		<ResourceDictionary>
@@ -11,31 +11,61 @@
 				<XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
 
 				<ResourceDictionary>
+					<ResourceDictionary.ThemeDictionaries>
 
-					<!--  Card surfaces  -->
-					<SolidColorBrush x:Key="Card" Color="#1AFFFFFF" />
-					<SolidColorBrush x:Key="Card2" Color="#12FFFFFF" />
-					<SolidColorBrush x:Key="Stroke" Color="#28FFFFFF" />
-					<SolidColorBrush x:Key="StrokeStrong" Color="#36FFFFFF" />
+						<!-- Dark theme -->
+						<ResourceDictionary x:Key="Dark">
+							<!-- Card surfaces -->
+							<SolidColorBrush x:Key="VB.Card" Color="#1AFFFFFF" />
+							<SolidColorBrush x:Key="VB.Card2" Color="#12FFFFFF" />
+							<SolidColorBrush x:Key="VB.Stroke" Color="#28FFFFFF" />
+							<SolidColorBrush x:Key="VB.StrokeStrong" Color="#36FFFFFF" />
 
-					<!--  Accent  -->
-					<SolidColorBrush x:Key="Accent" Color="#FF2B6BFF" />
-					<SolidColorBrush x:Key="AccentSoft" Color="#332B6BFF" />
+							<!-- Text -->
+							<SolidColorBrush x:Key="VB.TextSoft" Color="#CCFFFFFF" />
+							<SolidColorBrush x:Key="VB.TextFaint" Color="#99FFFFFF" />
+						</ResourceDictionary>
 
-					<!--  Text  -->
-					<SolidColorBrush x:Key="TextSoft" Color="#CCFFFFFF" />
-					<SolidColorBrush x:Key="TextFaint" Color="#99FFFFFF" />
+						<!-- Light theme -->
+						<ResourceDictionary x:Key="Light">
+							<!-- Card surfaces (subtle dark-on-light) -->
+							<SolidColorBrush x:Key="VB.Card" Color="#0A000000" />
+							<SolidColorBrush x:Key="VB.Card2" Color="#07000000" />
+							<SolidColorBrush x:Key="VB.Stroke" Color="#19000000" />
+							<SolidColorBrush x:Key="VB.StrokeStrong" Color="#2B000000" />
 
-					<!--  Used by SettingsPage "Save" button  -->
-					<Style x:Key="AccentButtonStyle" TargetType="Button">
-						<Setter Property="Background" Value="{StaticResource Accent}" />
+							<!-- Text -->
+							<SolidColorBrush x:Key="VB.TextSoft" Color="#CC000000" />
+							<SolidColorBrush x:Key="VB.TextFaint" Color="#99000000" />
+						</ResourceDictionary>
+
+						<!-- Fallback (used if theme key doesn't match) -->
+						<ResourceDictionary x:Key="Default">
+							<SolidColorBrush x:Key="VB.Card" Color="#1AFFFFFF" />
+							<SolidColorBrush x:Key="VB.Card2" Color="#12FFFFFF" />
+							<SolidColorBrush x:Key="VB.Stroke" Color="#28FFFFFF" />
+							<SolidColorBrush x:Key="VB.StrokeStrong" Color="#36FFFFFF" />
+							<SolidColorBrush x:Key="VB.TextSoft" Color="#CCFFFFFF" />
+							<SolidColorBrush x:Key="VB.TextFaint" Color="#99FFFFFF" />
+						</ResourceDictionary>
+
+					</ResourceDictionary.ThemeDictionaries>
+
+					<!-- Accent (same for both themes) -->
+					<SolidColorBrush x:Key="VB.Accent" Color="#FF2B6BFF" />
+					<SolidColorBrush x:Key="VB.AccentSoft" Color="#332B6BFF" />
+
+					<!-- Used by SettingsPage "Save" button -->
+					<Style x:Key="VB.AccentButtonStyle" TargetType="Button">
+						<Setter Property="Background" Value="{ThemeResource VB.Accent}" />
 						<Setter Property="Foreground" Value="White" />
-						<Setter Property="BorderBrush" Value="{StaticResource StrokeStrong}" />
+						<Setter Property="BorderBrush" Value="{ThemeResource VB.StrokeStrong}" />
 						<Setter Property="BorderThickness" Value="1" />
 						<Setter Property="Padding" Value="12,8" />
 						<Setter Property="CornerRadius" Value="10" />
 					</Style>
 				</ResourceDictionary>
+
 				<ResourceDictionary Source="ms-appx:///Styles/PlaylistStyles.xaml" />
 
 			</ResourceDictionary.MergedDictionaries>

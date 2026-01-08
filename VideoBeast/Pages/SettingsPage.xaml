@@ -1,60 +1,62 @@
 <Page
-	x:Class="VideoBeast.Pages.SettingsPage"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	mc:Ignorable="d">
+    x:Class="VideoBeast.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
 
 	<ScrollViewer>
 		<StackPanel Margin="12" Spacing="12">
 
 			<TextBlock
-				FontSize="24"
-				FontWeight="SemiBold"
-				Text="Settings" />
+                FontSize="24"
+                FontWeight="SemiBold"
+                Text="Settings" />
 
 			<Border
-				Padding="12"
-				Background="{StaticResource Card}"
-				BorderBrush="{StaticResource Stroke}"
-				BorderThickness="1"
-				CornerRadius="18">
+                Padding="12"
+                Background="{ThemeResource VB.Card}"
+                BorderBrush="{ThemeResource VB.Stroke}"
+                BorderThickness="1"
+                CornerRadius="18">
 
 				<StackPanel Spacing="10">
 					<TextBlock
-						FontSize="16"
-						FontWeight="SemiBold"
-						Text="Playback scaling" />
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Text="Playback scaling" />
 
-					<TextBlock Foreground="{StaticResource TextFaint}" Text="Choose how the video fits inside the player." />
-
-					<RadioButton
-						x:Name="RbFit"
-						Checked="Scaling_Checked"
-						Content="Fit (keep aspect ratio, black bars)" />
+					<TextBlock
+                        Foreground="{ThemeResource VB.TextFaint}"
+                        Text="Choose how the video fits inside the player." />
 
 					<RadioButton
-						x:Name="RbFill"
-						Checked="Scaling_Checked"
-						Content="Fill (crop to fill, no bars)" />
+                        x:Name="RbFit"
+                        Checked="Scaling_Checked"
+                        Content="Fit (keep aspect ratio, black bars)" />
 
 					<RadioButton
-						x:Name="RbStretch"
-						Checked="Scaling_Checked"
-						Content="Stretch (fill, may distort)" />
+                        x:Name="RbFill"
+                        Checked="Scaling_Checked"
+                        Content="Fill (crop to fill, no bars)" />
+
+					<RadioButton
+                        x:Name="RbStretch"
+                        Checked="Scaling_Checked"
+                        Content="Stretch (fill, may distort)" />
 				</StackPanel>
 			</Border>
 
 			<StackPanel
-				HorizontalAlignment="Right"
-				Orientation="Horizontal"
-				Spacing="8">
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="8">
 				<Button Click="Reset_Click" Content="Reset" />
 				<Button
-					Click="Save_Click"
-					Content="Save"
-					Style="{StaticResource AccentButtonStyle}" />
+                    Click="Save_Click"
+                    Content="Save"
+                    Style="{StaticResource VB.AccentButtonStyle}" />
 			</StackPanel>
 
 		</StackPanel>
