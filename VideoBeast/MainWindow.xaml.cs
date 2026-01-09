@@ -38,6 +38,7 @@ public sealed partial class MainWindow : Window
     private readonly LibraryTreeBuilder _navTreeBuilder;
     private readonly LibraryFileActions _fileActions;
     private readonly WindowChromeService _chrome;
+    private readonly WindowPlacementService _placementService;
 
     private const string PlaylistTag = "view:playlist";
 
@@ -69,7 +70,18 @@ public sealed partial class MainWindow : Window
         var hwnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
-        _appWindow.Resize(new Windows.Graphics.SizeInt32(1200,740));
+
+        var sizing = new WindowSizingService(_appWindow);
+        sizing.ApplyMinimumSize(960,600);
+
+        _placementService = new WindowPlacementService();
+        var placement = _placementService.LoadPlacement();
+        if (placement is not null)
+            _placementService.ApplyPlacement(_appWindow,placement);
+        else
+            sizing.ApplyDefaultSizeIfFirstLaunch(1200,800);
+
+        _appWindow.Closing += AppWindow_Closing;
 
         _chrome = new WindowChromeService(
             appWindow: _appWindow,
@@ -127,6 +139,9 @@ public sealed partial class MainWindow : Window
         UpdateBackButtonVisibility();
     }
 
+    private void AppWindow_Closing(AppWindow sender,AppWindowClosingEventArgs args)
+        => _placementService.SavePlacement(sender);
+
     private void RootGrid_Loaded(object sender,RoutedEventArgs e) { }
 
     public static Stretch DefaultPlayerStretch => Stretch.Uniform;
@@ -144,6 +159,7 @@ public sealed partial class MainWindow : Window
     }
 
     public bool IsPlayerFullscreen => _chrome.IsPlayerFullscreen;
+    public bool IsCompactOverlay => _chrome.IsCompactOverlay;
 
     public void SetPlayerFullscreen(bool on)
     {
@@ -154,6 +170,12 @@ public sealed partial class MainWindow : Window
     public void TogglePlayerFullscreen()
     {
         _chrome.TogglePlayerFullscreen();
+        UpdateBackButtonVisibility();
+    }
+
+    public void ToggleCompactOverlay()
+    {
+        _chrome.ToggleCompactOverlay();
         UpdateBackButtonVisibility();
     }
 

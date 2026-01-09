@@ -298,7 +298,7 @@
 			BorderThickness="0"
 			CornerRadius="0">
 
-			<Grid RowSpacing="10">
+			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="*" />
 					<RowDefinition Height="Auto" />
@@ -383,14 +383,22 @@
 									<Grid ColumnSpacing="10">
 										<Grid.ColumnDefinitions>
 											<ColumnDefinition Width="Auto" />
+
 											<ColumnDefinition Width="Auto" />
+
 											<ColumnDefinition Width="Auto" />
+
 											<ColumnDefinition Width="Auto" />
+
 											<ColumnDefinition Width="Auto" />
+
 											<ColumnDefinition Width="*" />
+
 											<ColumnDefinition Width="Auto" />
+
 											<ColumnDefinition Width="Auto" />
-										</Grid.ColumnDefinitions>
+
+											<ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
 
 										<!--  Play/Pause  -->
 										<Button
@@ -504,19 +512,61 @@
 											<ComboBoxItem Content="2.0x" Tag="2.0" />
 										</ComboBox>
 
-										<!--  Full screen  -->
+										<!--  Mini player  -->
+
 										<ToggleButton
-											x:Name="FullWindowToggle"
+
+											x:Name="CompactOverlayToggle"
+
 											Grid.Column="7"
-											Click="FullWindowToggle_Click"
+
+											Click="CompactOverlayToggle_Click"
+
 											Style="{StaticResource PlayerChipToggleStyle}"
-											ToolTipService.ToolTip="Full screen">
+
+											ToolTipService.ToolTip="Mini player">
+
 											<Viewbox
+
 												Width="16"
+
 												Height="16"
+
 												Stretch="Uniform">
-												<SymbolIcon Foreground="White" Symbol="FullScreen" />
+
+												<SymbolIcon x:Name="CompactOverlayIcon" Foreground="White" Symbol="Picture" />
+
 											</Viewbox>
+
+										</ToggleButton>
+
+
+										<!--  Full screen  -->
+
+										<ToggleButton
+
+											x:Name="FullWindowToggle"
+
+											Grid.Column="8"
+
+											Click="FullWindowToggle_Click"
+
+											Style="{StaticResource PlayerChipToggleStyle}"
+
+											ToolTipService.ToolTip="Full screen">
+
+											<Viewbox
+
+												Width="16"
+
+												Height="16"
+
+												Stretch="Uniform">
+
+												<SymbolIcon x:Name="FullWindowIcon" Foreground="White" Symbol="FullScreen" />
+
+											</Viewbox>
+
 										</ToggleButton>
 									</Grid>
 

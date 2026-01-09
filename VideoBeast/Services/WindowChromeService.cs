@@ -35,7 +35,10 @@ public sealed class WindowChromeService
     private double _prevNavCompactPaneLength;
     private double _prevNavOpenPaneLength;
 
+    private readonly WindowModeService _windowMode;
+
     public bool IsPlayerFullscreen { get; private set; }
+    public bool IsCompactOverlay => _appWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay;
 
     public WindowChromeService(
         AppWindow appWindow,
@@ -58,6 +61,8 @@ public sealed class WindowChromeService
 
         _getNavView = getNavView;
         _getStatusBar = getStatusBar;
+
+        _windowMode = new WindowModeService(_appWindow);
     }
 
     public void TogglePlayerFullscreen() => SetPlayerFullscreen(!IsPlayerFullscreen);
@@ -90,6 +95,43 @@ public sealed class WindowChromeService
                 _prevNavCompactPaneLength = nav.CompactPaneLength;
                 _prevNavOpenPaneLength = nav.OpenPaneLength;
 
+                if (_appWindow.Presenter is OverlappedPresenter op)
+                {
+                    op.SetBorderAndTitleBar(false,false);
+                }
+
+                _windowMode.EnterFullScreen();
+                ApplyShellFullscreen(nav,status,titleBar,enable: true);
+            }
+            else
+            {
+                _windowMode.ExitFullScreen();
+
+                if (_appWindow.Presenter is OverlappedPresenter op)
+                {
+                    op.SetBorderAndTitleBar(true,true);
+                }
+
+                ApplyShellFullscreen(nav,status,titleBar,enable: false);
+            }
+        }
+        catch { }
+    }
+
+    public void ToggleCompactOverlay()
+    {
+        if (IsPlayerFullscreen)
+            SetPlayerFullscreen(false);
+
+        _windowMode.ToggleCompactOverlay();
+    }
+
+    private void ApplyShellFullscreen(NavigationView nav,InfoBar status,UIElement titleBar,bool enable)
+    {
+        void Apply()
+        {
+            if (enable)
+            {
                 status.IsOpen = false;
                 status.Visibility = Visibility.Collapsed;
 
@@ -98,60 +140,43 @@ public sealed class WindowChromeService
                 _setExtendsContentIntoTitleBar(true);
                 _setTitleBar(null);
 
-                if (_appWindow.Presenter is OverlappedPresenter op)
-                {
-                    op.SetBorderAndTitleBar(false,false);
-                }
+                nav.IsSettingsVisible = false;
+                nav.IsPaneOpen = false;
 
+                nav.PaneDisplayMode = NavigationViewPaneDisplayMode.Left;
 
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    nav.IsSettingsVisible = false;
-                    nav.IsPaneOpen = false;
+                nav.CompactPaneLength = 0;
+                nav.OpenPaneLength = 0;
 
-                    nav.PaneDisplayMode = NavigationViewPaneDisplayMode.Left;
-
-                    nav.CompactPaneLength = 0;
-                    nav.OpenPaneLength = 0;
-
-                    nav.IsPaneVisible = false;
-
-                    nav.UpdateLayout();
-                });
+                nav.IsPaneVisible = false;
             }
             else
             {
-                if (_appWindow.Presenter is OverlappedPresenter op)
-                {
-                    op.SetBorderAndTitleBar(true,true);
-                }
+                nav.PaneDisplayMode = _prevNavPaneDisplayMode;
 
-                _dispatcherQueue.TryEnqueue(() =>
-                {
-                    nav.PaneDisplayMode = _prevNavPaneDisplayMode;
+                nav.CompactPaneLength = _prevNavCompactPaneLength;
+                nav.OpenPaneLength = _prevNavOpenPaneLength;
 
-                    nav.CompactPaneLength = _prevNavCompactPaneLength;
-                    nav.OpenPaneLength = _prevNavOpenPaneLength;
+                nav.IsPaneVisible = _prevNavIsPaneVisible;
+                nav.IsPaneOpen = _prevNavIsPaneOpen;
+                nav.IsSettingsVisible = _prevNavIsSettingsVisible;
 
-                    nav.IsPaneVisible = _prevNavIsPaneVisible;
-                    nav.IsPaneOpen = _prevNavIsPaneOpen;
-                    nav.IsSettingsVisible = _prevNavIsSettingsVisible;
+                titleBar.Visibility = _prevTitleBarVisibility;
 
-                    titleBar.Visibility = _prevTitleBarVisibility;
+                status.Visibility = _prevStatusBarVisibility;
+                status.IsOpen = _prevStatusBarIsOpen;
 
-                    status.Visibility = _prevStatusBarVisibility;
-                    status.IsOpen = _prevStatusBarIsOpen;
-
-                    _setExtendsContentIntoTitleBar(_prevExtendsContentIntoTitleBar);
-                    if (_prevExtendsContentIntoTitleBar)
-                        _setTitleBar(titleBar);
-
-                    nav.UpdateLayout();
-                });
+                _setExtendsContentIntoTitleBar(_prevExtendsContentIntoTitleBar);
+                if (_prevExtendsContentIntoTitleBar)
+                    _setTitleBar(titleBar);
             }
+
+            nav.UpdateLayout();
         }
-        catch
-        {
-        }
+
+        if (_dispatcherQueue.HasThreadAccess)
+            Apply();
+        else
+            _dispatcherQueue.TryEnqueue(Apply);
     }
 }

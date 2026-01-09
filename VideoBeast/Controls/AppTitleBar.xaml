@@ -10,14 +10,20 @@
 
 	<TitleBar
         x:Name="titleBar"
-        Title="VideoBeast"
+        Title=""
         IsPaneToggleButtonVisible="True">
 
 		<TitleBar.LeftHeader>
-			<FontIcon
-                Margin="0,0,8,0"
-                FontSize="14"
-                Glyph="&#xE714;" />
+			<Image
+                Width="20"
+                Height="20"
+                Margin="8,0,8,0"
+                Stretch="Uniform"
+                AutomationProperties.Name="App icon">
+                <Image.Source>
+					<SvgImageSource UriSource="ms-appx:///Assets/Video-Beast.svg" />
+                </Image.Source>
+            </Image>
 		</TitleBar.LeftHeader>
 
 		<TitleBar.Content>
