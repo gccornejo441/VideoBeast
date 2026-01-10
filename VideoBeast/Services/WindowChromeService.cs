@@ -19,13 +19,10 @@ public sealed class WindowChromeService
     private readonly Func<UIElement> _getTitleBarElement;
 
     private readonly Func<NavigationView> _getNavView;
-    private readonly Func<InfoBar> _getStatusBar;
 
     private bool _prevExtendsContentIntoTitleBar;
 
     private Visibility _prevTitleBarVisibility;
-    private Visibility _prevStatusBarVisibility;
-    private bool _prevStatusBarIsOpen;
 
     private bool _prevNavIsPaneVisible;
     private bool _prevNavIsPaneOpen;
@@ -38,7 +35,6 @@ public sealed class WindowChromeService
     private readonly WindowModeService _windowMode;
 
     public bool IsPlayerFullscreen { get; private set; }
-    public bool IsCompactOverlay => _appWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay;
 
     public WindowChromeService(
         AppWindow appWindow,
@@ -47,8 +43,7 @@ public sealed class WindowChromeService
         Action<bool> setExtendsContentIntoTitleBar,
         Action<UIElement?> setTitleBar,
         Func<UIElement> getTitleBarElement,
-        Func<NavigationView> getNavView,
-        Func<InfoBar> getStatusBar)
+        Func<NavigationView> getNavView)
     {
         _appWindow = appWindow;
         _dispatcherQueue = dispatcherQueue;
@@ -60,7 +55,6 @@ public sealed class WindowChromeService
         _getTitleBarElement = getTitleBarElement;
 
         _getNavView = getNavView;
-        _getStatusBar = getStatusBar;
 
         _windowMode = new WindowModeService(_appWindow);
     }
@@ -73,7 +67,6 @@ public sealed class WindowChromeService
         IsPlayerFullscreen = on;
 
         var nav = _getNavView();
-        var status = _getStatusBar();
         var titleBar = _getTitleBarElement();
 
         try
@@ -83,9 +76,6 @@ public sealed class WindowChromeService
                 _prevExtendsContentIntoTitleBar = _getExtendsContentIntoTitleBar();
 
                 _prevTitleBarVisibility = titleBar.Visibility;
-
-                _prevStatusBarVisibility = status.Visibility;
-                _prevStatusBarIsOpen = status.IsOpen;
 
                 _prevNavIsPaneVisible = nav.IsPaneVisible;
                 _prevNavIsPaneOpen = nav.IsPaneOpen;
@@ -101,7 +91,7 @@ public sealed class WindowChromeService
                 }
 
                 _windowMode.EnterFullScreen();
-                ApplyShellFullscreen(nav,status,titleBar,enable: true);
+                ApplyShellFullscreen(nav,titleBar,enable: true);
             }
             else
             {
@@ -112,29 +102,18 @@ public sealed class WindowChromeService
                     op.SetBorderAndTitleBar(true,true);
                 }
 
-                ApplyShellFullscreen(nav,status,titleBar,enable: false);
+                ApplyShellFullscreen(nav,titleBar,enable: false);
             }
         }
         catch { }
     }
 
-    public void ToggleCompactOverlay()
-    {
-        if (IsPlayerFullscreen)
-            SetPlayerFullscreen(false);
-
-        _windowMode.ToggleCompactOverlay();
-    }
-
-    private void ApplyShellFullscreen(NavigationView nav,InfoBar status,UIElement titleBar,bool enable)
+    private void ApplyShellFullscreen(NavigationView nav,UIElement titleBar,bool enable)
     {
         void Apply()
         {
             if (enable)
             {
-                status.IsOpen = false;
-                status.Visibility = Visibility.Collapsed;
-
                 titleBar.Visibility = Visibility.Collapsed;
 
                 _setExtendsContentIntoTitleBar(true);
@@ -162,9 +141,6 @@ public sealed class WindowChromeService
                 nav.IsSettingsVisible = _prevNavIsSettingsVisible;
 
                 titleBar.Visibility = _prevTitleBarVisibility;
-
-                status.Visibility = _prevStatusBarVisibility;
-                status.IsOpen = _prevStatusBarIsOpen;
 
                 _setExtendsContentIntoTitleBar(_prevExtendsContentIntoTitleBar);
                 if (_prevExtendsContentIntoTitleBar)

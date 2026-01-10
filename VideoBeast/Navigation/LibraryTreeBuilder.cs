@@ -43,7 +43,7 @@ public sealed class LibraryTreeBuilder
         else
         {
             var root = CreateFolderNavItem(libraryFolder);
-            root.IsExpanded = true;
+            root.IsExpanded = false;
 
             await LoadFolderChildrenIntoNavItemAsync(libraryFolder,root);
 
@@ -52,12 +52,19 @@ public sealed class LibraryTreeBuilder
 
         nav.MenuItems.Add(new NavigationViewItemSeparator());
 
-        nav.MenuItems.Add(new NavigationViewItemHeader { Content = "Commands" });
+        var commandsMenu = new NavigationViewItem
+        {
+            Content = "Commands",
+            Icon = new SymbolIcon(Symbol.More),
+            SelectsOnInvoked = false
+        };
 
-        nav.MenuItems.Add(CreateActionItem("Choose Folder…",Symbol.Folder,"action:chooseFolder"));
-        nav.MenuItems.Add(CreateActionItem("Import…",Symbol.Add,"action:import"));
-        nav.MenuItems.Add(CreateActionItem("Reload",Symbol.Refresh,"action:refresh"));
-        nav.MenuItems.Add(CreateActionItem("Show in Finder",Symbol.OpenFile,"action:openFolder"));
+        commandsMenu.MenuItems.Add(CreateActionItem("Choose Folder…",Symbol.Folder,"action:chooseFolder"));
+        commandsMenu.MenuItems.Add(CreateActionItem("Import…",Symbol.Add,"action:import"));
+        commandsMenu.MenuItems.Add(CreateActionItem("Reload",Symbol.Refresh,"action:refresh"));
+        commandsMenu.MenuItems.Add(CreateActionItem("Show in Finder",Symbol.OpenFile,"action:openFolder"));
+
+        nav.MenuItems.Add(commandsMenu);
     }
 
     public async Task HandleExpandingAsync(NavigationViewItemExpandingEventArgs args)

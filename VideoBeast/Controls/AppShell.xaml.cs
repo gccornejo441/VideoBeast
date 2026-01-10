@@ -12,5 +12,4 @@ public sealed partial class AppShell : UserControl
     public AppTitleBar TitleBar => AppTitleBar;
     public NavigationView Navigation => NavView;
     public Frame Frame => RootFrame;
-    public InfoBar Status => StatusBar;
 }

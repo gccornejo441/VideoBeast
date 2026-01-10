@@ -13,8 +13,10 @@ public sealed class WindowPlacementService
 {
     private const string PlacementKey = "WindowPlacementV1";
 
-    private const int DefaultWidth = 1200;
-    private const int DefaultHeight = 800;
+    private const int DefaultWidth = 1280;
+    private const int DefaultHeight = 720;
+    private const int FallbackWidth = 1024;
+    private const int FallbackHeight = 768;
 
     private const int MinVisibleWidth = 100;
     private const int MinVisibleHeight = 100;
@@ -56,7 +58,6 @@ public sealed class WindowPlacementService
             Height = appWindow.Size.Height,
             X = appWindow.Position.X,
             Y = appWindow.Position.Y,
-            IsCompactOverlay = presenterKind == AppWindowPresenterKind.CompactOverlay,
             WasFullScreen = presenterKind == AppWindowPresenterKind.FullScreen,
             PresenterKind = presenterKind
         };
@@ -84,13 +85,6 @@ public sealed class WindowPlacementService
             ? target
             : BuildCenteredRect(workArea);
 
-        if (presenterKind == AppWindowPresenterKind.CompactOverlay)
-        {
-            appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
-            appWindow.MoveAndResize(safeTarget);
-            return;
-        }
-
         appWindow.MoveAndResize(safeTarget);
 
         if (placement.IsMaximized && appWindow.Presenter is OverlappedPresenter op)
@@ -101,9 +95,6 @@ public sealed class WindowPlacementService
     {
         if (placement.PresenterKind != AppWindowPresenterKind.Overlapped)
             return placement.PresenterKind;
-
-        if (placement.IsCompactOverlay)
-            return AppWindowPresenterKind.CompactOverlay;
 
         if (placement.WasFullScreen)
             return AppWindowPresenterKind.FullScreen;
@@ -126,8 +117,17 @@ public sealed class WindowPlacementService
 
     private static RectInt32 BuildCenteredRect(RectInt32 workArea)
     {
-        int width = Math.Min(DefaultWidth,workArea.Width);
-        int height = Math.Min(DefaultHeight,workArea.Height);
+        int width = DefaultWidth;
+        int height = DefaultHeight;
+
+        if (width > workArea.Width || height > workArea.Height)
+        {
+            width = FallbackWidth;
+            height = FallbackHeight;
+        }
+
+        width = Math.Min(width,workArea.Width);
+        height = Math.Min(height,workArea.Height);
 
         int x = workArea.X + Math.Max(0,(workArea.Width - width) / 2);
         int y = workArea.Y + Math.Max(0,(workArea.Height - height) / 2);

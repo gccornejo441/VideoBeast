@@ -396,8 +396,6 @@
 
 											<ColumnDefinition Width="Auto" />
 
-											<ColumnDefinition Width="Auto" />
-
 											<ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
 
 										<!--  Play/Pause  -->
@@ -512,42 +510,13 @@
 											<ComboBoxItem Content="2.0x" Tag="2.0" />
 										</ComboBox>
 
-										<!--  Mini player  -->
-
-										<ToggleButton
-
-											x:Name="CompactOverlayToggle"
-
-											Grid.Column="7"
-
-											Click="CompactOverlayToggle_Click"
-
-											Style="{StaticResource PlayerChipToggleStyle}"
-
-											ToolTipService.ToolTip="Mini player">
-
-											<Viewbox
-
-												Width="16"
-
-												Height="16"
-
-												Stretch="Uniform">
-
-												<SymbolIcon x:Name="CompactOverlayIcon" Foreground="White" Symbol="Picture" />
-
-											</Viewbox>
-
-										</ToggleButton>
-
-
 										<!--  Full screen  -->
 
 										<ToggleButton
 
 											x:Name="FullWindowToggle"
 
-											Grid.Column="8"
+											Grid.Column="7"
 
 											Click="FullWindowToggle_Click"
 

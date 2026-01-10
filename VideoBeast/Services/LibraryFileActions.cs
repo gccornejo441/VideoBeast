@@ -18,7 +18,6 @@ public sealed class LibraryFileActions
     private readonly Func<Task<bool>> _ensureLibraryFolderAsync;
     private readonly Func<Task> _rebuildNavMenuAsync;
     private readonly Func<string,Task> _stopPlaybackIfPlayingAsync;
-    private readonly Action<string,InfoBarSeverity> _showStatus;
     private readonly Action<string>? _onDeletedPath;
 
     public LibraryFileActions(
@@ -26,14 +25,12 @@ public sealed class LibraryFileActions
         Func<Task<bool>> ensureLibraryFolderAsync,
         Func<Task> rebuildNavMenuAsync,
         Func<string,Task> stopPlaybackIfPlayingAsync,
-        Action<string,InfoBarSeverity> showStatus,
         Action<string>? onDeletedPath = null)
     {
         _getXamlRoot = getXamlRoot;
         _ensureLibraryFolderAsync = ensureLibraryFolderAsync;
         _rebuildNavMenuAsync = rebuildNavMenuAsync;
         _stopPlaybackIfPlayingAsync = stopPlaybackIfPlayingAsync;
-        _showStatus = showStatus;
         _onDeletedPath = onDeletedPath;
     }
 
@@ -43,10 +40,7 @@ public sealed class LibraryFileActions
         {
             var dir = Path.GetDirectoryName(file.Path);
             if (string.IsNullOrWhiteSpace(dir))
-            {
-                _showStatus("Could not resolve the containing folder.",InfoBarSeverity.Warning);
                 return;
-            }
 
             var folder = await StorageFolder.GetFolderFromPathAsync(dir);
 
@@ -63,10 +57,7 @@ public sealed class LibraryFileActions
                 await Launcher.LaunchFolderAsync(folder);
             }
         }
-        catch
-        {
-            _showStatus("Could not open in Explorer (access denied).",InfoBarSeverity.Error);
-        }
+        catch { }
     }
 
     public void CopyPathToClipboard(StorageFile file)
@@ -78,13 +69,8 @@ public sealed class LibraryFileActions
 
             Clipboard.SetContent(dp);
             Clipboard.Flush();
-
-            _showStatus("Path copied to clipboard.",InfoBarSeverity.Informational);
         }
-        catch
-        {
-            _showStatus("Failed to copy path to clipboard.",InfoBarSeverity.Error);
-        }
+        catch { }
     }
 
     public async Task RenameFileWithDialogAsync(StorageFile file)
@@ -108,16 +94,10 @@ public sealed class LibraryFileActions
             baseName = baseName[..^ext.Length];
 
         if (string.IsNullOrWhiteSpace(baseName))
-        {
-            _showStatus("Rename canceled (empty name).",InfoBarSeverity.Warning);
             return;
-        }
 
         if (baseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-        {
-            _showStatus("Invalid file name characters.",InfoBarSeverity.Warning);
             return;
-        }
 
         var newName = baseName + ext;
 
@@ -126,12 +106,8 @@ public sealed class LibraryFileActions
             await file.RenameAsync(newName,NameCollisionOption.FailIfExists);
 
             await _rebuildNavMenuAsync().ConfigureAwait(true);
-            _showStatus("Renamed file.",InfoBarSeverity.Informational);
         }
-        catch
-        {
-            _showStatus("Rename failed (name may already exist or file is locked).",InfoBarSeverity.Error);
-        }
+        catch { }
     }
 
     public async Task DeleteFileWithConfirmAsync(StorageFile file)
@@ -141,10 +117,7 @@ public sealed class LibraryFileActions
 
         bool ok = await ConfirmDeleteAsync(file).ConfigureAwait(true);
         if (!ok)
-        {
-            _showStatus("Delete canceled.",InfoBarSeverity.Informational);
             return;
-        }
 
         // If playing, stop first to avoid file locks
         await _stopPlaybackIfPlayingAsync(file.Path).ConfigureAwait(true);
@@ -159,22 +132,15 @@ public sealed class LibraryFileActions
             _onDeletedPath?.Invoke(targetPath);
 
             await _rebuildNavMenuAsync().ConfigureAwait(true);
-            _showStatus("Deleted file.",InfoBarSeverity.Informational);
         }
-        catch
-        {
-            _showStatus("Delete failed (file may be locked).",InfoBarSeverity.Error);
-        }
+        catch { }
     }
 
     private async Task<string?> PromptRenameBaseNameAsync(StorageFile file,string ext)
     {
         var xamlRoot = _getXamlRoot();
         if (xamlRoot is null)
-        {
-            _showStatus("UI not ready yet. Try again.",InfoBarSeverity.Warning);
             return null;
-        }
 
         var tb = new TextBox
         {
@@ -217,10 +183,7 @@ public sealed class LibraryFileActions
     {
         var xamlRoot = _getXamlRoot();
         if (xamlRoot is null)
-        {
-            _showStatus("UI not ready yet. Try again.",InfoBarSeverity.Warning);
             return false;
-        }
 
         var content = new StackPanel { Spacing = 8 };
 

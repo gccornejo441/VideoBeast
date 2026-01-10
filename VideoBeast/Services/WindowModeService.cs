@@ -8,10 +8,6 @@ namespace VideoBeast.Services;
 
 public sealed class WindowModeService
 {
-    private const int CompactOverlayWidth = 420;
-    private const int CompactOverlayHeight = 260;
-    private const int CompactOverlayMargin = 16;
-
     private const int DefaultWidth = 1200;
     private const int DefaultHeight = 800;
 
@@ -48,34 +44,6 @@ public sealed class WindowModeService
         RestoreNormalBounds();
     }
 
-    public void ToggleCompactOverlay()
-    {
-        if (_appWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
-        {
-            ExitCompactOverlay();
-            return;
-        }
-
-        EnterCompactOverlay();
-    }
-
-    public void EnterCompactOverlay()
-    {
-        if (_appWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay) return;
-
-        RememberNormalBoundsIfNeeded();
-        _appWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
-        _appWindow.MoveAndResize(BuildCompactOverlayBounds());
-    }
-
-    public void ExitCompactOverlay()
-    {
-        if (_appWindow.Presenter.Kind != AppWindowPresenterKind.CompactOverlay) return;
-
-        _appWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
-        RestoreNormalBounds();
-    }
-
     private void RememberNormalBoundsIfNeeded()
     {
         if (_appWindow.Presenter.Kind != AppWindowPresenterKind.Overlapped) return;
@@ -105,19 +73,6 @@ public sealed class WindowModeService
         var bounds = _lastNormalBounds ?? BuildCenteredRect();
         var safeBounds = EnsureVisible(bounds);
         _appWindow.MoveAndResize(safeBounds);
-    }
-
-    private RectInt32 BuildCompactOverlayBounds()
-    {
-        var workArea = GetWorkArea();
-
-        int width = Math.Min(CompactOverlayWidth,workArea.Width);
-        int height = Math.Min(CompactOverlayHeight,workArea.Height);
-
-        int x = workArea.X + Math.Max(0,workArea.Width - width - CompactOverlayMargin);
-        int y = workArea.Y + Math.Max(0,workArea.Height - height - CompactOverlayMargin);
-
-        return new RectInt32(x,y,width,height);
     }
 
     private RectInt32 BuildCenteredRect()

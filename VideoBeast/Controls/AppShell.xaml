@@ -13,7 +13,6 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
-			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
 		<local:AppTitleBar x:Name="AppTitleBar" Grid.Row="0" />
@@ -29,15 +28,6 @@
 
 			<Frame x:Name="RootFrame" />
 		</NavigationView>
-		<InfoBar
-			x:Name="StatusBar"
-			Title="Status"
-			Grid.Row="2"
-			Margin="12,0,12,12"
-			IsClosable="True"
-			IsOpen="False"
-			Message=""
-			Severity="Informational" />
 
 
 	</Grid>

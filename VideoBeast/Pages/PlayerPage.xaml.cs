@@ -703,23 +703,6 @@ public sealed partial class PlayerPage : Page
         RestartHideTimer();
     }
 
-    private void CompactOverlayToggle_Click(object sender,RoutedEventArgs e)
-    {
-        if (_settings.IsFullWindow)
-        {
-            _settings.IsFullWindow = false;
-            FullWindowToggle.IsChecked = false;
-            ApplyFullScreen(false,useTransitions: true);
-            PersistSettings();
-        }
-
-        MainWindow.Instance?.ToggleCompactOverlay();
-
-        UpdateDynamicToolTips();
-        SetControlsVisible(true);
-        RestartHideTimer();
-    }
-
     private void PersistSettings()
     {
         MainWindow.Instance?.SavePlayerSettings(_settings);
@@ -729,19 +712,12 @@ public sealed partial class PlayerPage : Page
     /// This is the exact place + method that implements:
     /// ToolTipService.SetToolTip(LoopToggle, LoopToggle.IsChecked == true ? "Loop: On" : "Loop: Off");
     /// ToolTipService.SetToolTip(FullWindowToggle, FullWindowToggle.IsChecked == true ? "Exit full screen" : "Full screen");
-    /// ToolTipService.SetToolTip(CompactOverlayToggle, CompactOverlayToggle.IsChecked == true ? "Exit mini player" : "Mini player");
     /// </summary>
     private void UpdateDynamicToolTips()
     {
-        var isCompactOverlay = MainWindow.Instance?.IsCompactOverlay ?? false;
-
         ToolTipService.SetToolTip(LoopToggle,LoopToggle.IsChecked == true ? "Loop: On" : "Loop: Off");
         ToolTipService.SetToolTip(FullWindowToggle,FullWindowToggle.IsChecked == true ? "Exit full screen" : "Full screen");
         FullWindowIcon.Symbol = FullWindowToggle.IsChecked == true ? Symbol.BackToWindow : Symbol.FullScreen;
-
-        CompactOverlayToggle.IsChecked = isCompactOverlay;
-        ToolTipService.SetToolTip(CompactOverlayToggle,isCompactOverlay ? "Exit mini player" : "Mini player");
-        CompactOverlayIcon.Symbol = isCompactOverlay ? Symbol.BackToWindow : Symbol.Picture;
     }
 
     private static double Clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);

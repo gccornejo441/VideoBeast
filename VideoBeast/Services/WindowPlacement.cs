@@ -11,7 +11,6 @@ public sealed class WindowPlacement
     public int Y { get; set; }
 
     public bool IsMaximized { get; set; }
-    public bool IsCompactOverlay { get; set; }
     public bool WasFullScreen { get; set; }
 
     public AppWindowPresenterKind PresenterKind { get; set; } = AppWindowPresenterKind.Overlapped;

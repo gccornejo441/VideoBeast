@@ -16,7 +16,7 @@ namespace VideoBeast.Services;
 
 public sealed class LibraryImportService
 {
-    public sealed record ImportResult(int ImportedCount,string Message,InfoBarSeverity Severity);
+    public sealed record ImportResult(int ImportedCount,string Message);
 
     public async Task<ImportResult> ImportWithPickerAsync(
         Window window,
@@ -30,7 +30,7 @@ public sealed class LibraryImportService
 
         var picked = await picker.PickMultipleFilesAsync();
         if (picked is null || picked.Count == 0)
-            return new ImportResult(0,"Import canceled.",InfoBarSeverity.Informational);
+            return new ImportResult(0,"Import canceled.");
 
         int imported = 0;
 
@@ -44,9 +44,9 @@ public sealed class LibraryImportService
         }
 
         if (imported == 0)
-            return new ImportResult(0,"No .mp4 files were selected.",InfoBarSeverity.Warning);
+            return new ImportResult(0,"No .mp4 files were selected.");
 
-        return new ImportResult(imported,$"Imported {imported} video(s).",InfoBarSeverity.Informational);
+        return new ImportResult(imported,$"Imported {imported} video(s).");
     }
 
     public async Task<ImportResult> ImportFromDropAsync(
@@ -54,7 +54,7 @@ public sealed class LibraryImportService
         StorageFolder destination)
     {
         if (!dataView.Contains(StandardDataFormats.StorageItems))
-            return new ImportResult(0,"Nothing to import.",InfoBarSeverity.Warning);
+            return new ImportResult(0,"Nothing to import.");
 
         IReadOnlyList<IStorageItem> items;
         try
@@ -63,7 +63,7 @@ public sealed class LibraryImportService
         }
         catch
         {
-            return new ImportResult(0,"Drop failed (could not read items).",InfoBarSeverity.Error);
+            return new ImportResult(0,"Drop failed (could not read items).");
         }
 
         var files = items
@@ -72,7 +72,7 @@ public sealed class LibraryImportService
             .ToList();
 
         if (files.Count == 0)
-            return new ImportResult(0,"Drop .mp4 files only.",InfoBarSeverity.Warning);
+            return new ImportResult(0,"Drop .mp4 files only.");
 
         int imported = 0;
 
@@ -82,6 +82,6 @@ public sealed class LibraryImportService
             imported++;
         }
 
-        return new ImportResult(imported,$"Imported {imported} video(s) via drag and drop.",InfoBarSeverity.Informational);
+        return new ImportResult(imported,$"Imported {imported} video(s) via drag and drop.");
     }
 }

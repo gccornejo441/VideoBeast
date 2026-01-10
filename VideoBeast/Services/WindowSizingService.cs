@@ -1,3 +1,5 @@
+using System;
+
 using Microsoft.UI.Windowing;
 
 using Windows.Graphics;
@@ -27,6 +29,11 @@ public sealed class WindowSizingService
 
     public void ApplyDefaultSizeIfFirstLaunch(int width,int height)
     {
+        ApplyDefaultSizeIfFirstLaunch(width,height,width,height);
+    }
+
+    public void ApplyDefaultSizeIfFirstLaunch(int width,int height,int fallbackWidth,int fallbackHeight)
+    {
         var settings = ApplicationData.Current.LocalSettings;
         if (settings.Values.TryGetValue(HasLaunchedBeforeKey,out var value)
             && value is bool hasLaunched
@@ -35,7 +42,21 @@ public sealed class WindowSizingService
             return;
         }
 
-        _appWindow.Resize(new SizeInt32(width,height));
+        var displayArea = DisplayArea.GetFromWindowId(_appWindow.Id,DisplayAreaFallback.Primary);
+        var workArea = displayArea.WorkArea;
+
+        var target = new SizeInt32(width,height);
+        if (target.Width > workArea.Width || target.Height > workArea.Height)
+            target = new SizeInt32(fallbackWidth,fallbackHeight);
+
+        if (target.Width > workArea.Width || target.Height > workArea.Height)
+        {
+            target = new SizeInt32(
+                Math.Min(target.Width,workArea.Width),
+                Math.Min(target.Height,workArea.Height));
+        }
+
+        _appWindow.Resize(target);
         settings.Values[HasLaunchedBeforeKey] = true;
     }
 }

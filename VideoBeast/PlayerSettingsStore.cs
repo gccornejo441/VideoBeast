@@ -35,7 +35,6 @@ public static class PlayerSettingsStore
         }
         catch
         {
-            // swallow + fall back
         }
 
         return new PlayerSettings();
@@ -70,8 +69,6 @@ public static class PlayerSettingsStore
         }
     }
 
-    // Back-compat: if older versions saved "PlayerStretch", map it to "Stretch".
-    // This keeps old settings working without changing your PlayerSettings JSON shape.
     private static string NormalizeJson(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -79,7 +76,6 @@ public static class PlayerSettingsStore
 
         if (json.Contains("\"PlayerStretch\"",StringComparison.Ordinal))
         {
-            // Replace the property name only (robust vs whitespace)
             json = Regex.Replace(
                 json,
                 "\"PlayerStretch\"\\s*:",
