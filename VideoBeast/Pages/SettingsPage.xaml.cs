@@ -12,7 +12,6 @@ public sealed partial class SettingsPage : Page
     {
         InitializeComponent();
 
-        // Read from the live in-memory settings (what the app is actually using)
         _selectedStretch = MainWindow.Instance?.GetPlayerSettings().Stretch
                            ?? MainWindow.DefaultPlayerStretch;
 
@@ -28,9 +27,9 @@ public sealed partial class SettingsPage : Page
 
     private void Scaling_Checked(object sender,RoutedEventArgs e)
     {
-        if (sender == RbFit) _selectedStretch = Stretch.Uniform;
-        else if (sender == RbFill) _selectedStretch = Stretch.UniformToFill;
-        else if (sender == RbStretch) _selectedStretch = Stretch.Fill;
+        if (ReferenceEquals(sender, RbFit)) _selectedStretch = Stretch.Uniform;
+        else if (ReferenceEquals(sender, RbFill)) _selectedStretch = Stretch.UniformToFill;
+        else if (ReferenceEquals(sender, RbStretch)) _selectedStretch = Stretch.Fill;
     }
 
     private void Reset_Click(object sender,RoutedEventArgs e)
@@ -41,10 +40,8 @@ public sealed partial class SettingsPage : Page
 
     private void Save_Click(object sender,RoutedEventArgs e)
     {
-        // Persist + apply
         MainWindow.Instance?.SavePlayerStretch(_selectedStretch);
 
-        // Go back if possible
         if (Frame?.CanGoBack == true)
             Frame.GoBack();
     }

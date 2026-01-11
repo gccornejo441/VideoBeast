@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Media;
 
 using VideoBeast.Navigation;
 using VideoBeast.Pages;
+using VideoBeast.Playlists;
 using VideoBeast.Services;
 
 using Windows.ApplicationModel.DataTransfer;
@@ -33,6 +34,7 @@ public sealed partial class MainWindow : Window
 
     private StorageFile? _selectedFile;
     private PlayerSettings _playerSettings = new();
+    private StorageFile? _contextMenuTargetFile;
 
     private readonly AppWindow _appWindow;
     private readonly LibraryTreeBuilder _navTreeBuilder;
@@ -41,6 +43,8 @@ public sealed partial class MainWindow : Window
     private readonly WindowPlacementService _placementService;
 
     private const string PlaylistTag = "view:playlist";
+    private const string PlaylistsTag = "page:playlists";
+    private bool _isNavigatingProgrammatically = false;
 
     public MainWindow()
     {
@@ -69,6 +73,9 @@ public sealed partial class MainWindow : Window
         var hwnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
+
+        // Set window icon for taskbar
+        SetWindowIcon(hwnd);
 
         var sizing = new WindowSizingService(_appWindow);
         sizing.ApplyMinimumSize(960,600);
@@ -245,12 +252,11 @@ public sealed partial class MainWindow : Window
 
         var playlistItem = new NavigationViewItem
         {
-            Content = "Playlist",
+            Content = "Folder Videos",
             Icon = new SymbolIcon(Symbol.Bullets),
             Tag = PlaylistTag
         };
 
-        // Find the Commands menu item and insert Playlist after it
         int commandsIndex = -1;
         for (int i = 0; i < Shell.Navigation.MenuItems.Count; i++)
         {
@@ -262,17 +268,47 @@ public sealed partial class MainWindow : Window
             }
         }
 
-        // Insert after Commands if found, otherwise add at the end
         if (commandsIndex >= 0)
             Shell.Navigation.MenuItems.Insert(commandsIndex + 1, playlistItem);
         else
             Shell.Navigation.MenuItems.Add(playlistItem);
     }
 
+    private void EnsurePlaylistsNavItem()
+    {
+        var existing = Shell.Navigation.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => item.Tag as string == PlaylistsTag);
+        
+        if (existing != null) return;
+
+        var playlistsItem = new NavigationViewItem
+        {
+            Content = "Playlists",
+            Tag = PlaylistsTag,
+            Icon = new SymbolIcon(Symbol.MusicInfo)
+        };
+
+        var folderVideosItem = Shell.Navigation.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(item => item.Tag as string == PlaylistTag);
+        
+        if (folderVideosItem != null)
+        {
+            var index = Shell.Navigation.MenuItems.IndexOf(folderVideosItem);
+            Shell.Navigation.MenuItems.Insert(index + 1, playlistsItem);
+        }
+        else
+        {
+            Shell.Navigation.MenuItems.Add(playlistsItem);
+        }
+    }
+
     private async Task RebuildNavMenuAsync()
     {
         await _navTreeBuilder.RebuildAsync(Shell.Navigation,_folderService.LibraryFolder);
         EnsurePlaylistNavItem();
+        EnsurePlaylistsNavItem();
     }
 
     private async void NavView_Expanding(NavigationView sender,NavigationViewItemExpandingEventArgs args)
@@ -282,10 +318,17 @@ public sealed partial class MainWindow : Window
 
     private void NavView_SelectionChanged(NavigationView sender,NavigationViewSelectionChangedEventArgs args)
     {
+        // Ignore selection changes triggered by programmatic navigation (e.g., back button)
+        if (_isNavigatingProgrammatically)
+            return;
+        
         if (args.IsSettingsSelected)
         {
+            // Check if we're already on the Settings page to avoid duplicate navigation
+            if (Shell.Frame.Content is VideoBeast.Pages.SettingsPage)
+                return;
+            
             Shell.Frame.Navigate(typeof(VideoBeast.Pages.SettingsPage));
-            UpdateBackButtonVisibility();
         }
     }
 
@@ -293,8 +336,11 @@ public sealed partial class MainWindow : Window
     {
         if (args.IsSettingsInvoked)
         {
+            // Check if we're already on the Settings page to avoid duplicate navigation
+            if (Shell.Frame.Content is VideoBeast.Pages.SettingsPage)
+                return;
+            
             Shell.Frame.Navigate(typeof(VideoBeast.Pages.SettingsPage));
-            UpdateBackButtonVisibility();
             return;
         }
 
@@ -307,8 +353,21 @@ public sealed partial class MainWindow : Window
             if (folder is null)
                 return;
 
-            Shell.Frame.Navigate(typeof(VideoBeast.Pages.PlaylistPage),folder);
-            UpdateBackButtonVisibility();
+            // Check if we're already on the Folder Videos page to avoid duplicate navigation
+            if (Shell.Frame.Content is VideoBeast.Pages.FolderVideosPage)
+                return;
+
+            Shell.Frame.Navigate(typeof(VideoBeast.Pages.FolderVideosPage),folder);
+            return;
+        }
+
+        if (nvi.Tag is string playlistsTag && playlistsTag == PlaylistsTag)
+        {
+            // Check if we're already on the Playlists page to avoid duplicate navigation
+            if (Shell.Frame.Content is VideoBeast.Pages.PlaylistsPage)
+                return;
+
+            Shell.Frame.Navigate(typeof(VideoBeast.Pages.PlaylistsPage));
             return;
         }
 
@@ -335,7 +394,7 @@ public sealed partial class MainWindow : Window
                 if (Shell.Frame.Content is VideoBeast.Pages.PlayerPage player)
                     player.SetCurrentFolderText(c.Folder.Path);
 
-                if (Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+                if (Shell.Frame.Content is VideoBeast.Pages.FolderVideosPage playlist)
                     await playlist.LoadFolderAsync(c.Folder);
 
                 _search.Reset();
@@ -346,6 +405,49 @@ public sealed partial class MainWindow : Window
     private void RootFrame_Navigated(object sender,Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         UpdateBackButtonVisibility();
+        
+        // Sync NavigationView selection with current page to prevent unwanted re-navigation
+        _isNavigatingProgrammatically = true;
+        
+        if (e.SourcePageType == typeof(VideoBeast.Pages.SettingsPage))
+        {
+            // Navigated to Settings - selection is already correct
+        }
+        else if (e.SourcePageType == typeof(VideoBeast.Pages.FolderVideosPage))
+        {
+            // Navigated to Folder Videos - find and select the playlist item
+            var playlistItem = Shell.Navigation.MenuItems
+                .OfType<NavigationViewItem>()
+                .FirstOrDefault(i => i.Tag as string == PlaylistTag);
+            if (playlistItem != null)
+                Shell.Navigation.SelectedItem = playlistItem;
+        }
+        else if (e.SourcePageType == typeof(VideoBeast.Pages.PlaylistsPage))
+        {
+            // Navigated to Playlists - find and select the playlists item
+            var playlistsItem = Shell.Navigation.MenuItems
+                .OfType<NavigationViewItem>()
+                .FirstOrDefault(i => i.Tag as string == PlaylistsTag);
+            if (playlistsItem != null)
+                Shell.Navigation.SelectedItem = playlistsItem;
+        }
+        else if (e.SourcePageType == typeof(VideoBeast.Pages.PlaylistDetailsPage))
+        {
+            // Navigated to Playlist Details - keep playlists item selected
+            var playlistsItem = Shell.Navigation.MenuItems
+                .OfType<NavigationViewItem>()
+                .FirstOrDefault(i => i.Tag as string == PlaylistsTag);
+            if (playlistsItem != null)
+                Shell.Navigation.SelectedItem = playlistsItem;
+        }
+        else
+        {
+            // Navigated to PlayerPage or other - clear settings selection
+            Shell.Navigation.SelectedItem = null;
+        }
+        
+        // Use DispatcherQueue to reset the flag after all SelectionChanged events have processed
+        DispatcherQueue.TryEnqueue(() => _isNavigatingProgrammatically = false);
 
         _playback.HandleFrameNavigated(
             e: e,
@@ -371,7 +473,7 @@ public sealed partial class MainWindow : Window
         if (Shell.Frame.Content is VideoBeast.Pages.PlayerPage player)
             player.SetCurrentFolderText(folder.Path);
 
-        if (Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+        if (Shell.Frame.Content is VideoBeast.Pages.FolderVideosPage playlist)
             await playlist.LoadFolderAsync(folder);
 
         _search.Reset();
@@ -384,7 +486,7 @@ public sealed partial class MainWindow : Window
 
         await RebuildNavMenuAsync();
 
-        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.FolderVideosPage playlist)
             await playlist.LoadFolderAsync(_folderService.SelectedFolder);
 
         _search.Reset();
@@ -406,7 +508,7 @@ public sealed partial class MainWindow : Window
                 currentFolderText: _folderService.LibraryFolder?.Path ?? "No folder selected",
                 isLibraryMissing: false);
 
-            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.FolderVideosPage playlist)
                 await playlist.LoadFolderAsync(_folderService.SelectedFolder);
         }
 
@@ -424,7 +526,7 @@ public sealed partial class MainWindow : Window
         await _fileActions.DeleteFileWithConfirmAsync(_selectedFile);
         _search.Reset();
 
-        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+        if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.FolderVideosPage playlist)
             await playlist.LoadFolderAsync(_folderService.SelectedFolder);
     }
 
@@ -462,7 +564,7 @@ public sealed partial class MainWindow : Window
                 currentFolderText: _folderService.LibraryFolder?.Path ?? "No folder selected",
                 isLibraryMissing: false);
 
-            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.PlaylistPage playlist)
+            if (_folderService.SelectedFolder is not null && Shell.Frame.Content is VideoBeast.Pages.FolderVideosPage playlist)
                 await playlist.LoadFolderAsync(_folderService.SelectedFolder);
         }
 
@@ -479,6 +581,18 @@ public sealed partial class MainWindow : Window
             SelectFileFromContext(file,owningItem);
             _search.Reset();
             await _playback.RequestPlayAsync(file,_playerSettings);
+        };
+
+        // Add to Playlist menu item (opens dialog)
+        var addToPlaylist = new MenuFlyoutItem
+        {
+            Text = "Add to Playlist",
+            Icon = new SymbolIcon(Symbol.Add)
+        };
+        addToPlaylist.Click += async (_, __) =>
+        {
+            _contextMenuTargetFile = file;
+            await ShowAddToPlaylistDialogAsync();
         };
 
         var showInFolder = new MenuFlyoutItem { Text = "Show in folder",Icon = new SymbolIcon(Symbol.Find) };
@@ -514,19 +628,194 @@ public sealed partial class MainWindow : Window
         };
 
         flyout.Items.Add(play);
+        flyout.Items.Add(new MenuFlyoutSeparator());
+        flyout.Items.Add(addToPlaylist);
+        flyout.Items.Add(new MenuFlyoutSeparator());
         flyout.Items.Add(showInFolder);
-        flyout.Items.Add(new MenuFlyoutSeparator());
         flyout.Items.Add(copyPath);
-        flyout.Items.Add(rename);
         flyout.Items.Add(new MenuFlyoutSeparator());
+        flyout.Items.Add(rename);
         flyout.Items.Add(delete);
 
         return flyout;
+    }
+
+    private async Task ShowAddToPlaylistDialogAsync()
+    {
+        if (_contextMenuTargetFile == null) return;
+
+        var store = new PlaylistStore();
+        var playlists = await store.GetAllAsync();
+
+        // Create dialog
+        var dialog = new ContentDialog
+        {
+            Title = "Add to Playlist",
+            PrimaryButtonText = "Add",
+            SecondaryButtonText = "New Playlist",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = RootGrid.XamlRoot
+        };
+
+        // Create ListView for playlists
+        var listView = new ListView
+        {
+            SelectionMode = ListViewSelectionMode.Single,
+            MinHeight = 200,
+            MaxHeight = 400
+        };
+
+        foreach (var playlist in playlists)
+        {
+            listView.Items.Add(new ListViewItem
+            {
+                Content = $"{playlist.Name} ({playlist.Items.Count} videos)",
+                Tag = playlist.Id
+            });
+        }
+
+        // Select first item by default if any exist
+        if (listView.Items.Count > 0)
+            listView.SelectedIndex = 0;
+
+        // Add empty state message if no playlists
+        if (playlists.Count == 0)
+        {
+            var emptyText = new TextBlock
+            {
+                Text = "No playlists yet. Click 'New Playlist' to create one.",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 20, 0, 20),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            dialog.Content = emptyText;
+            dialog.IsPrimaryButtonEnabled = false;
+        }
+        else
+        {
+            dialog.Content = listView;
+        }
+
+        var result = await dialog.ShowAsync();
+
+        if (result == ContentDialogResult.Primary && listView.SelectedItem is ListViewItem selectedItem)
+        {
+            // Add to selected playlist
+            if (selectedItem.Tag is Guid playlistId)
+            {
+                try
+                {
+                    await store.AddItemsAsync(playlistId, new[] { _contextMenuTargetFile });
+                    
+                    var targetPlaylist = playlists.FirstOrDefault(p => p.Id == playlistId);
+                    var successDialog = new ContentDialog
+                    {
+                        Title = "Video Added",
+                        Content = $"Added '{_contextMenuTargetFile.DisplayName}' to playlist '{targetPlaylist?.Name ?? "Unknown"}'.",
+                        CloseButtonText = "OK",
+                        XamlRoot = RootGrid.XamlRoot
+                    };
+                    await successDialog.ShowAsync();
+                }
+                catch (Exception ex)
+                {
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "Error",
+                        Content = $"Failed to add video to playlist: {ex.Message}",
+                        CloseButtonText = "OK",
+                        XamlRoot = RootGrid.XamlRoot
+                    };
+                    await errorDialog.ShowAsync();
+                }
+            }
+        }
+        else if (result == ContentDialogResult.Secondary)
+        {
+            // Create new playlist
+            await AddToNewPlaylist_Click(null!, null!);
+        }
+    }
+
+    private async Task AddToNewPlaylist_Click(object sender, RoutedEventArgs e)
+    {
+        if (_contextMenuTargetFile == null) return;
+
+        // Show dialog to get playlist name
+        var dialog = new ContentDialog
+        {
+            Title = "New Playlist",
+            PrimaryButtonText = "Create",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = RootGrid.XamlRoot
+        };
+
+        var textBox = new TextBox
+        {
+            PlaceholderText = "Playlist name",
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+        dialog.Content = textBox;
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(textBox.Text))
+        {
+            try
+            {
+                var store = new PlaylistStore();
+                var playlist = await store.CreateAsync(textBox.Text.Trim());
+                await store.AddItemsAsync(playlist.Id, new[] { _contextMenuTargetFile });
+                
+                // Show success message
+                var successDialog = new ContentDialog
+                {
+                    Title = "Playlist Created",
+                    Content = $"Created playlist '{playlist.Name}' and added '{_contextMenuTargetFile.DisplayName}'.",
+                    CloseButtonText = "OK",
+                    XamlRoot = RootGrid.XamlRoot
+                };
+                await successDialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var errorDialog = new ContentDialog
+                {
+                    Title = "Error",
+                    Content = $"Failed to create playlist: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = RootGrid.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            }
+        }
     }
 
     private void SelectFileFromContext(StorageFile file,NavigationViewItem item)
     {
         Shell.Navigation.SelectedItem = item;
         _selectedFile = file;
+    }
+
+    private void SetWindowIcon(IntPtr hwnd)
+    {
+        try
+        {
+            // Try to load icon from the package
+            var iconPath = System.IO.Path.Combine(
+                Windows.ApplicationModel.Package.Current.InstalledLocation.Path,
+                "Assets", "Square44x44Logo.targetsize-48.png");
+
+            if (System.IO.File.Exists(iconPath))
+            {
+                // WinUI 3 uses AppWindow.SetIcon for setting window icons
+                _appWindow.SetIcon(iconPath);
+            }
+        }
+        catch
+        {
+            // Icon setting is optional, silently fail if not available
+        }
     }
 }
