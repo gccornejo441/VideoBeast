@@ -802,10 +802,21 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            // Try to load icon from the package
-            var iconPath = System.IO.Path.Combine(
-                Windows.ApplicationModel.Package.Current.InstalledLocation.Path,
-                "Assets", "Square44x44Logo.targetsize-48.png");
+            // Determine base directory for both packaged and unpackaged scenarios
+            string baseDirectory;
+            try
+            {
+                // Try packaged app path first
+                baseDirectory = Windows.ApplicationModel.Package.Current.InstalledLocation.Path;
+            }
+            catch
+            {
+                // Fall back to unpackaged app path
+                baseDirectory = AppContext.BaseDirectory;
+            }
+
+            // Construct path to the .ico file
+            var iconPath = System.IO.Path.Combine(baseDirectory, "Assets", "Video-Beast.ico");
 
             if (System.IO.File.Exists(iconPath))
             {

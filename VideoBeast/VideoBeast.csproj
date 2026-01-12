@@ -31,6 +31,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Assets\Video-Beast.ico">
+      <CopyToOutputDirectory>CopyIfNewer</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <Page Update="Pages\PlaylistPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
