@@ -173,7 +173,7 @@
 										<ColumnDefinition Width="*" />
 									</Grid.ColumnDefinitions>
 
-									<!--  collapse top/bottom spacing for a tighter “Netflix clean” look  -->
+									<!--  collapse top/bottom spacing for a tighter ï¿½Netflix cleanï¿½ look  -->
 									<Grid.RowDefinitions>
 										<RowDefinition Height="0" />
 										<RowDefinition Height="Auto" />
@@ -560,11 +560,11 @@
 								HorizontalAlignment="Center"
 								FontSize="22"
 								FontWeight="SemiBold"
-								Text="Pick a folder, then import MP4s" />
+								Text="Your Video Library Awaits" />
 							<TextBlock
 								HorizontalAlignment="Center"
 								Foreground="{ThemeResource VB.TextFaint}"
-								Text="Select a folder in the left pane, then open Playlist from the menu to browse videos." />
+								Text="Select a folder to start enjoying your MP4 collection." />
 
 						</StackPanel>
 					</Border>
