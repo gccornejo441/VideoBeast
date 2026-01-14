@@ -48,6 +48,54 @@
 				</StackPanel>
 			</Border>
 
+			<Border
+                Padding="12"
+                Background="{ThemeResource VB.Card}"
+                BorderBrush="{ThemeResource VB.Stroke}"
+                BorderThickness="1"
+                CornerRadius="18">
+
+				<StackPanel Spacing="10">
+					<TextBlock
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Text="Local AI (Ollama)" />
+
+					<TextBlock
+                        Foreground="{ThemeResource VB.TextFaint}"
+                        TextWrapping="Wrap"
+                        Text="Enable AI-powered commands in the search box. Type '>' followed by a command (e.g., '>play nature video'). Requires Ollama running at http://localhost:11434" />
+
+					<ToggleSwitch
+                        x:Name="OllamaEnabledToggle"
+                        Header="Enable Local AI"
+                        Toggled="OllamaEnabled_Toggled" />
+
+					<TextBox
+                        x:Name="OllamaBaseUrlBox"
+                        Header="Ollama Base URL"
+                        PlaceholderText="http://localhost:11434"
+                        TextChanged="OllamaBaseUrl_Changed" />
+
+					<ComboBox
+                        x:Name="OllamaModelCombo"
+                        Header="AI Model"
+                        PlaceholderText="Select a model"
+                        MinWidth="300"
+                        SelectionChanged="OllamaModel_SelectionChanged" />
+
+					<Button
+                        x:Name="RefreshModelsButton"
+                        Content="Refresh Models"
+                        Click="RefreshModels_Click" />
+
+					<TextBlock
+                        x:Name="OllamaStatusText"
+                        Foreground="{ThemeResource VB.TextFaint}"
+                        TextWrapping="Wrap" />
+				</StackPanel>
+			</Border>
+
 			<StackPanel
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"

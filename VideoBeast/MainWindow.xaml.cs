@@ -54,6 +54,13 @@ public sealed partial class MainWindow : Window
         _playback = new PlaybackCoordinator(() => Shell.Frame);
         _guard = new LibraryGuardService(_folderService,() => Shell.Frame);
 
+        _actions = new ActionRouter(onError: (_,__) => { });
+        _actions.Register("action:chooseFolder",ChooseFolderAsync);
+        _actions.Register("action:import",ImportAsync);
+        _actions.Register("action:refresh",RefreshAsync);
+        _actions.Register("action:delete",DeleteSelectedAsync);
+        _actions.Register("action:openFolder",OpenFolderAsync);
+
         var searchService = new LibrarySearchService();
         _search = new SearchCoordinator(
             getLibraryFolder: () => _folderService.LibraryFolder,
@@ -61,14 +68,11 @@ public sealed partial class MainWindow : Window
             getPlayerSettings: () => _playerSettings,
             onFileChosen: file => _selectedFile = file,
             playback: _playback,
-            searchService: searchService);
-
-        _actions = new ActionRouter(onError: (_,__) => { });
-        _actions.Register("action:chooseFolder",ChooseFolderAsync);
-        _actions.Register("action:import",ImportAsync);
-        _actions.Register("action:refresh",RefreshAsync);
-        _actions.Register("action:delete",DeleteSelectedAsync);
-        _actions.Register("action:openFolder",OpenFolderAsync);
+            searchService: searchService,
+            actionRouter: _actions,
+            getXamlRoot: () => RootGrid.XamlRoot,
+            navigateToPage: (type, param) => Shell.Frame.Navigate(type, param),
+            showStatus: (message, severity) => Shell.ShowStatus(message, severity));
 
         var hwnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
@@ -192,6 +196,11 @@ public sealed partial class MainWindow : Window
             isLibraryMissing: _folderService.LibraryFolder is null);
     }
 
+    public void RefreshSearchCoordinatorAiSettings()
+    {
+        _search.RefreshAiSettings();
+    }
+
     public async Task PlayFromUiAsync(StorageFile file)
     {
         _selectedFile = file;
@@ -252,7 +261,7 @@ public sealed partial class MainWindow : Window
 
         var playlistItem = new NavigationViewItem
         {
-            Content = "Folder Videos",
+            Content = "Library",
             Icon = new SymbolIcon(Symbol.Bullets),
             Tag = PlaylistTag
         };

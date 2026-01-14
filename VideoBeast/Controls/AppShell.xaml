@@ -12,15 +12,22 @@
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
 
 		<local:AppTitleBar x:Name="AppTitleBar" Grid.Row="0" />
 
+		<InfoBar
+			x:Name="StatusBar"
+			Grid.Row="1"
+			IsOpen="False"
+			IsClosable="True" />
+
 		<NavigationView
 			
 			x:Name="NavView"
-			Grid.Row="1"
+			Grid.Row="2"
 			IsBackButtonVisible="Collapsed"
 			IsPaneToggleButtonVisible="False"
 			IsSettingsVisible="True"
