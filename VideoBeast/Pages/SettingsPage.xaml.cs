@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using VideoBeast.Ai;
+using VideoBeast.Services;
 
 namespace VideoBeast.Pages;
 
@@ -15,6 +17,7 @@ public sealed partial class SettingsPage : Page
     private OllamaSettings _ollamaSettings;
     private OllamaClient? _ollamaClient;
     private List<string> _availableModels = new();
+    private bool _isOllamaUrlLocal;
 
     public SettingsPage()
     {
@@ -27,6 +30,7 @@ public sealed partial class SettingsPage : Page
 
         _ollamaSettings = OllamaSettingsStore.Load();
         ApplyOllamaSettingsToUI();
+        UpdateStartButtonState();
 
         _ = LoadOllamaModelsAsync();
     }
@@ -111,6 +115,7 @@ public sealed partial class SettingsPage : Page
     private void OllamaBaseUrl_Changed(object sender, TextChangedEventArgs e)
     {
         _ollamaSettings.BaseUrl = OllamaBaseUrlBox.Text?.Trim() ?? "http://localhost:11434";
+        UpdateStartButtonState();
     }
 
     private void OllamaModel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -124,6 +129,82 @@ public sealed partial class SettingsPage : Page
     private async void RefreshModels_Click(object sender, RoutedEventArgs e)
     {
         await LoadOllamaModelsAsync();
+    }
+
+    private async void StartOllama_Click(object sender, RoutedEventArgs e)
+    {
+        StartOllamaButton.IsEnabled = false;
+        RefreshModelsButton.IsEnabled = false;
+        OllamaStatusText.Text = "Starting Ollama...";
+
+        try
+        {
+            var normalizedUrl = OllamaClient.NormalizeBaseUrl(_ollamaSettings.BaseUrl);
+
+            if (_ollamaClient != null)
+            {
+                _ollamaClient.Dispose();
+                _ollamaClient = null;
+            }
+
+            _ollamaClient = new OllamaClient(normalizedUrl);
+
+            var result = await OllamaBootstrapper.TryStartAndWaitAsync(
+                normalizedUrl,
+                _ollamaClient,
+                CancellationToken.None);
+
+            if (result.IsSuccess)
+            {
+                OllamaStatusText.Text = result.Status == OllamaBootstrapper.BootstrapStatus.AlreadyRunning
+                    ? "Ollama is already running."
+                    : "Ollama started successfully.";
+
+                await LoadOllamaModelsAsync();
+            }
+            else
+            {
+                OllamaStatusText.Text = GetUserFriendlyMessage(result);
+
+                if (result.Status == OllamaBootstrapper.BootstrapStatus.OllamaNotFound)
+                {
+                    MainWindow.Instance?.ShowStatus(
+                        "Ollama not found. Install from https://ollama.ai and ensure it's on your PATH.",
+                        InfoBarSeverity.Warning);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            OllamaStatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            UpdateStartButtonState();
+            RefreshModelsButton.IsEnabled = true;
+        }
+    }
+
+    private string GetUserFriendlyMessage(OllamaBootstrapper.BootstrapResult result)
+    {
+        return result.Status switch
+        {
+            OllamaBootstrapper.BootstrapStatus.Success => "Ollama started successfully.",
+            OllamaBootstrapper.BootstrapStatus.AlreadyRunning => "Ollama is already running.",
+            OllamaBootstrapper.BootstrapStatus.NotLocalUrl => "Cannot auto-start Ollama for remote URLs. Ensure Ollama is running at the configured address.",
+            OllamaBootstrapper.BootstrapStatus.OllamaNotFound => "Ollama not found. Install from https://ollama.ai and ensure it's on your PATH.",
+            OllamaBootstrapper.BootstrapStatus.ProcessStartFailed => $"Failed to start Ollama: {result.Message}",
+            OllamaBootstrapper.BootstrapStatus.Timeout => "Ollama is taking longer than expected to start. It may still be initializing.",
+            OllamaBootstrapper.BootstrapStatus.Cancelled => "Startup cancelled.",
+            _ => "Unknown error occurred."
+        };
+    }
+
+    private void UpdateStartButtonState()
+    {
+        var normalizedUrl = OllamaClient.NormalizeBaseUrl(_ollamaSettings.BaseUrl);
+        _isOllamaUrlLocal = OllamaBootstrapper.IsLocalUrl(normalizedUrl);
+        StartOllamaButton.IsEnabled = _isOllamaUrlLocal;
     }
 
     private void Reset_Click(object sender,RoutedEventArgs e)

@@ -15,20 +15,37 @@ public sealed partial class AppShell : UserControl
 
     public void ShowStatus(string message, InfoBarSeverity severity)
     {
-        DispatcherQueue.TryEnqueue(() =>
+        if (DispatcherQueue.HasThreadAccess)
         {
             StatusBar.Title = "VideoBeast";
             StatusBar.Message = message;
             StatusBar.Severity = severity;
             StatusBar.IsOpen = true;
-        });
+        }
+        else
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                StatusBar.Title = "VideoBeast";
+                StatusBar.Message = message;
+                StatusBar.Severity = severity;
+                StatusBar.IsOpen = true;
+            });
+        }
     }
 
     public void HideStatus()
     {
-        DispatcherQueue.TryEnqueue(() =>
+        if (DispatcherQueue.HasThreadAccess)
         {
             StatusBar.IsOpen = false;
-        });
+        }
+        else
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                StatusBar.IsOpen = false;
+            });
+        }
     }
 }

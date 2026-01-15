@@ -28,14 +28,21 @@ public sealed class OllamaClient : IDisposable
         _baseUrl = NormalizeBaseUrl(baseUrl);
     }
 
-    private static string NormalizeBaseUrl(string baseUrl)
+    public static string NormalizeBaseUrl(string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(baseUrl))
             return "http://localhost:11434";
 
         var normalized = baseUrl.Trim();
-        if (normalized.EndsWith("/"))
+        
+        while (normalized.EndsWith("/"))
             normalized = normalized.TrimEnd('/');
+
+        if (!normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = "http://" + normalized;
+        }
 
         return normalized;
     }

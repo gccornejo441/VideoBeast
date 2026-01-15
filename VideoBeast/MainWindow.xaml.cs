@@ -201,6 +201,11 @@ public sealed partial class MainWindow : Window
         _search.RefreshAiSettings();
     }
 
+    public void ShowStatus(string message, InfoBarSeverity severity)
+    {
+        Shell.ShowStatus(message, severity);
+    }
+
     public async Task PlayFromUiAsync(StorageFile file)
     {
         _selectedFile = file;

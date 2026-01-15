@@ -84,15 +84,22 @@
                         MinWidth="300"
                         SelectionChanged="OllamaModel_SelectionChanged" />
 
-					<Button
-                        x:Name="RefreshModelsButton"
-                        Content="Refresh Models"
-                        Click="RefreshModels_Click" />
+					<StackPanel Orientation="Horizontal">
+						<Button
+					                       x:Name="RefreshModelsButton"
+					                       Content="Refresh Models"
+					                       Click="RefreshModels_Click" />
+						<Button
+					                       x:Name="StartOllamaButton"
+					                       Content="Start Ollama"
+					                       Click="StartOllama_Click"
+					                       Margin="8,0,0,0" />
+					</StackPanel>
 
 					<TextBlock
-                        x:Name="OllamaStatusText"
-                        Foreground="{ThemeResource VB.TextFaint}"
-                        TextWrapping="Wrap" />
+					                   x:Name="OllamaStatusText"
+					                   Foreground="{ThemeResource VB.TextFaint}"
+					                   TextWrapping="Wrap" />
 				</StackPanel>
 			</Border>
 

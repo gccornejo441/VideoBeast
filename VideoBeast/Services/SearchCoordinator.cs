@@ -30,6 +30,10 @@ public sealed class SearchCoordinator
     private CancellationTokenSource? _cts;
     private CancellationTokenSource? _aiCts;
     private string? _pendingAiCommand;
+    private bool _isInAiMode;
+    private bool? _cachedAvailability;
+    private DateTime _availabilityCacheTime;
+    private static readonly TimeSpan AvailabilityCacheDuration = TimeSpan.FromSeconds(3);
 
     private OllamaClient? _ollamaClient;
     private readonly AiCommandParser _aiParser = new();
@@ -86,6 +90,7 @@ public sealed class SearchCoordinator
         _ollamaClient?.Dispose();
         _ollamaClient = null;
         _aiExecutor = null;
+        _cachedAvailability = null;
         InitializeAiServices();
     }
 
@@ -93,6 +98,7 @@ public sealed class SearchCoordinator
     {
         _searchSelectedFile = null;
         _pendingAiCommand = null;
+        _isInAiMode = false;
         _cts?.Cancel();
         _cts = null;
         _aiCts?.Cancel();
@@ -116,6 +122,13 @@ public sealed class SearchCoordinator
         if (q.StartsWith(">"))
         {
             var command = q.Substring(1).Trim();
+            
+            if (!_isInAiMode)
+            {
+                _isInAiMode = true;
+                _cachedAvailability = null;
+            }
+
             if (command.Length > 0)
             {
                 var settings = OllamaSettingsStore.Load();
@@ -123,19 +136,22 @@ public sealed class SearchCoordinator
                 if (!settings.Enabled || string.IsNullOrWhiteSpace(settings.DefaultModel))
                 {
                     sender.ItemsSource = new List<string> { "Enable Local AI + select a model in Settings" };
-                    _pendingAiCommand = null;
                     return;
                 }
 
                 if (_ollamaClient != null)
                 {
-                    var available = await _ollamaClient.IsAvailableAsync(ct);
-                    if (ct.IsCancellationRequested) return;
+                    var now = DateTime.UtcNow;
+                    if (_cachedAvailability == null || (now - _availabilityCacheTime) > AvailabilityCacheDuration)
+                    {
+                        _cachedAvailability = await _ollamaClient.IsAvailableAsync(ct);
+                        _availabilityCacheTime = now;
+                        if (ct.IsCancellationRequested) return;
+                    }
 
-                    if (!available)
+                    if (_cachedAvailability == false)
                     {
                         sender.ItemsSource = new List<string> { $"Ollama not reachable at {settings.BaseUrl}" };
-                        _pendingAiCommand = null;
                         return;
                     }
                 }
@@ -149,6 +165,8 @@ public sealed class SearchCoordinator
             }
             return;
         }
+
+        _isInAiMode = false;
 
         if (q.Length < 2)
         {
@@ -181,9 +199,12 @@ public sealed class SearchCoordinator
 
     public void HandleSuggestionChosen(AutoSuggestBox sender,AutoSuggestBoxSuggestionChosenEventArgs args)
     {
-        if (args.SelectedItem is string aiCommand && !string.IsNullOrEmpty(_pendingAiCommand))
+        if (args.SelectedItem is string aiSuggestion)
         {
-            sender.Text = ">" + _pendingAiCommand;
+            if (!string.IsNullOrEmpty(_pendingAiCommand))
+            {
+                sender.Text = ">" + _pendingAiCommand;
+            }
             return;
         }
 
@@ -206,16 +227,18 @@ public sealed class SearchCoordinator
             {
                 _navigateToPage(typeof(VideoBeast.Pages.SettingsPage), null);
                 sender.Text = string.Empty;
+                _pendingAiCommand = null;
                 return;
             }
 
-            if (_ollamaClient != null)
+            if (_ollamaClient != null && _cachedAvailability != true)
             {
                 var available = await _ollamaClient.IsAvailableAsync();
                 if (!available)
                 {
                     _navigateToPage(typeof(VideoBeast.Pages.SettingsPage), null);
                     sender.Text = string.Empty;
+                    _pendingAiCommand = null;
                     return;
                 }
             }
@@ -230,6 +253,11 @@ public sealed class SearchCoordinator
 
                 sender.Text = string.Empty;
                 _pendingAiCommand = null;
+            }
+            else
+            {
+                _navigateToPage(typeof(VideoBeast.Pages.SettingsPage), null);
+                sender.Text = string.Empty;
             }
             return;
         }
