@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -13,6 +14,8 @@ public sealed class OllamaClient : IDisposable
 {
     private readonly HttpClient _httpClient;
     private string _baseUrl;
+
+    public string BaseUrl => _baseUrl;
 
     public OllamaClient(string baseUrl)
     {
@@ -65,6 +68,26 @@ public sealed class OllamaClient : IDisposable
         catch
         {
             return false;
+        }
+    }
+
+    public async Task<TimeSpan?> PingAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var url = $"{_baseUrl}/api/tags";
+            var stopwatch = Stopwatch.StartNew();
+            var response = await _httpClient.GetAsync(url, ct);
+            stopwatch.Stop();
+
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            return stopwatch.Elapsed;
+        }
+        catch
+        {
+            return null;
         }
     }
 

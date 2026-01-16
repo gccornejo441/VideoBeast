@@ -18,6 +18,9 @@ public sealed partial class SettingsPage : Page
     private OllamaClient? _ollamaClient;
     private List<string> _availableModels = new();
     private bool _isOllamaUrlLocal;
+    private DispatcherTimer? _ollamaStatusTimer;
+    private bool _isCheckingStatus;
+    private CancellationTokenSource? _bootstrapCts;
 
     public SettingsPage()
     {
@@ -33,6 +36,118 @@ public sealed partial class SettingsPage : Page
         UpdateStartButtonState();
 
         _ = LoadOllamaModelsAsync();
+
+        // Wire up page lifecycle events
+        Loaded += SettingsPage_Loaded;
+        Unloaded += SettingsPage_Unloaded;
+    }
+
+    private void SettingsPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Initialize and start status monitoring timer
+        _ollamaStatusTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(5)
+        };
+        _ollamaStatusTimer.Tick += OllamaStatusTimer_Tick;
+        _ollamaStatusTimer.Start();
+
+        // Perform initial status check
+        UpdateOllamaStatusDisplay();
+    }
+
+    private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
+    {
+        // Stop and dispose timer
+        if (_ollamaStatusTimer != null)
+        {
+            _ollamaStatusTimer.Stop();
+            _ollamaStatusTimer.Tick -= OllamaStatusTimer_Tick;
+            _ollamaStatusTimer = null;
+        }
+    }
+
+    private async void OllamaStatusTimer_Tick(object? sender, object e)
+    {
+        // Prevent concurrent status checks
+        if (_isCheckingStatus)
+        {
+            return;
+        }
+
+        _isCheckingStatus = true;
+        try
+        {
+            await UpdateOllamaStatusAsync();
+        }
+        finally
+        {
+            _isCheckingStatus = false;
+        }
+    }
+
+    private async Task UpdateOllamaStatusAsync()
+    {
+        try
+        {
+            var normalizedUrl = OllamaClient.NormalizeBaseUrl(_ollamaSettings.BaseUrl);
+
+            // Update endpoint text
+            OllamaEndpointText.Text = normalizedUrl;
+
+            if (_ollamaClient == null || _ollamaClient.BaseUrl != normalizedUrl)
+            {
+                _ollamaClient?.Dispose();
+                _ollamaClient = new OllamaClient(normalizedUrl);
+            }
+
+            // Check if Ollama is available
+            var isAvailable = await _ollamaClient.IsAvailableAsync();
+
+            if (isAvailable)
+            {
+                // Measure latency
+                var latency = await _ollamaClient.PingAsync();
+
+                // Update UI - connected state (green)
+                OllamaStatusIndicator.Fill = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 76, 175, 80));
+                OllamaConnectionStatus.Text = "Running";
+                OllamaLatencyText.Text = latency.HasValue ? $"{latency.Value.TotalMilliseconds:F0} ms" : "—";
+            }
+            else
+            {
+                // Update UI - disconnected state (red)
+                OllamaStatusIndicator.Fill = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 244, 67, 54));
+                OllamaConnectionStatus.Text = "Not running";
+                OllamaLatencyText.Text = "—";
+            }
+        }
+        catch
+        {
+            // Update UI - error state (red)
+            OllamaStatusIndicator.Fill = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 244, 67, 54));
+            OllamaConnectionStatus.Text = "Not running";
+            OllamaLatencyText.Text = "—";
+            OllamaEndpointText.Text = OllamaClient.NormalizeBaseUrl(_ollamaSettings.BaseUrl);
+        }
+    }
+
+    private async void UpdateOllamaStatusDisplay()
+    {
+        if (_isCheckingStatus)
+        {
+            return;
+        }
+
+        _isCheckingStatus = true;
+        try
+        {
+            await UpdateOllamaStatusAsync();
+        }
+        finally
+        {
+            _isCheckingStatus = false;
+        }
     }
 
     private void ApplySelectionToUI(Stretch stretch)
@@ -133,9 +248,20 @@ public sealed partial class SettingsPage : Page
 
     private async void StartOllama_Click(object sender, RoutedEventArgs e)
     {
-        StartOllamaButton.IsEnabled = false;
+        // Create cancellation token source for bootstrap
+        _bootstrapCts = new CancellationTokenSource();
+
+        // Update button visibility
+        StartOllamaButton.Visibility = Visibility.Collapsed;
+        CancelOllamaButton.Visibility = Visibility.Visible;
+        CancelOllamaButton.IsEnabled = true;
+
         RefreshModelsButton.IsEnabled = false;
         OllamaStatusText.Text = "Starting Ollama...";
+
+        // Set status indicator to yellow (starting)
+        OllamaStatusIndicator.Fill = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 193, 7));
+        OllamaConnectionStatus.Text = "Starting…";
 
         try
         {
@@ -152,7 +278,7 @@ public sealed partial class SettingsPage : Page
             var result = await OllamaBootstrapper.TryStartAndWaitAsync(
                 normalizedUrl,
                 _ollamaClient,
-                CancellationToken.None);
+                _bootstrapCts.Token);
 
             if (result.IsSuccess)
             {
@@ -174,14 +300,64 @@ public sealed partial class SettingsPage : Page
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            OllamaStatusText.Text = "Startup cancelled.";
+        }
         catch (Exception ex)
         {
             OllamaStatusText.Text = $"Error: {ex.Message}";
         }
         finally
         {
+            // Dispose and null out cancellation token source
+            _bootstrapCts?.Dispose();
+            _bootstrapCts = null;
+
+            // Restore button visibility
+            StartOllamaButton.Visibility = Visibility.Visible;
+            CancelOllamaButton.Visibility = Visibility.Collapsed;
+
             UpdateStartButtonState();
             RefreshModelsButton.IsEnabled = true;
+
+            // Refresh status display
+            UpdateOllamaStatusDisplay();
+        }
+    }
+
+    private void CancelOllama_Click(object sender, RoutedEventArgs e)
+    {
+        _bootstrapCts?.Cancel();
+        CancelOllamaButton.IsEnabled = false; // Disable to prevent double-cancel
+    }
+
+    private async void OpenOllamaInBrowser_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var normalizedUrl = OllamaClient.NormalizeBaseUrl(_ollamaSettings.BaseUrl);
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(normalizedUrl));
+        }
+        catch (Exception ex)
+        {
+            OllamaStatusText.Text = $"Failed to open browser: {ex.Message}";
+        }
+    }
+
+    private void CopyOllamaEndpoint_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var normalizedUrl = OllamaClient.NormalizeBaseUrl(_ollamaSettings.BaseUrl);
+            var dataPackage = new Windows.ApplicationModel.DataTransfer.DataPackage();
+            dataPackage.SetText(normalizedUrl);
+            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
+            OllamaStatusText.Text = "Endpoint copied to clipboard";
+        }
+        catch (Exception ex)
+        {
+            OllamaStatusText.Text = $"Failed to copy to clipboard: {ex.Message}";
         }
     }
 

@@ -62,11 +62,51 @@
                         Text="Local AI (Ollama)" />
 
 					<TextBlock
-                        Foreground="{ThemeResource VB.TextFaint}"
-                        TextWrapping="Wrap"
-                        Text="Enable AI-powered commands in the search box. Type '>' followed by a command (e.g., '>play nature video'). Requires Ollama running at http://localhost:11434" />
-
-					<ToggleSwitch
+					                    Foreground="{ThemeResource VB.TextFaint}"
+					                    TextWrapping="Wrap"
+					                    Text="Enable AI-powered commands in the search box. Type '>' followed by a command (e.g., '>play nature video'). Requires Ollama running at http://localhost:11434" />
+	
+						<!-- Live Status Indicator -->
+						<Grid ColumnSpacing="12">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto" />
+								<ColumnDefinition Width="Auto" />
+								<ColumnDefinition Width="*" />
+							</Grid.ColumnDefinitions>
+	
+							<StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+								<Ellipse
+									x:Name="OllamaStatusIndicator"
+									Width="10"
+									Height="10"
+									Fill="#FFF44336"
+									VerticalAlignment="Center" />
+								<TextBlock Text="Status:" Foreground="{ThemeResource VB.TextFaint}" VerticalAlignment="Center" />
+								<TextBlock
+									x:Name="OllamaConnectionStatus"
+									Text="Disconnected"
+									FontWeight="SemiBold"
+									VerticalAlignment="Center" />
+							</StackPanel>
+	
+							<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+								<TextBlock Text="Endpoint:" Foreground="{ThemeResource VB.TextFaint}" VerticalAlignment="Center" />
+								<TextBlock
+									x:Name="OllamaEndpointText"
+									Text="—"
+									VerticalAlignment="Center" />
+							</StackPanel>
+	
+							<StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" HorizontalAlignment="Left">
+								<TextBlock Text="Latency:" Foreground="{ThemeResource VB.TextFaint}" VerticalAlignment="Center" />
+								<TextBlock
+									x:Name="OllamaLatencyText"
+									Text="—"
+									VerticalAlignment="Center" />
+							</StackPanel>
+						</Grid>
+	
+						<ToggleSwitch
                         x:Name="OllamaEnabledToggle"
                         Header="Enable Local AI"
                         Toggled="OllamaEnabled_Toggled" />
@@ -84,17 +124,33 @@
                         MinWidth="300"
                         SelectionChanged="OllamaModel_SelectionChanged" />
 
-					<StackPanel Orientation="Horizontal">
-						<Button
-					                       x:Name="RefreshModelsButton"
-					                       Content="Refresh Models"
-					                       Click="RefreshModels_Click" />
-						<Button
-					                       x:Name="StartOllamaButton"
-					                       Content="Start Ollama"
-					                       Click="StartOllama_Click"
-					                       Margin="8,0,0,0" />
-					</StackPanel>
+					<StackPanel Orientation="Horizontal" Spacing="8">
+							<Button
+								x:Name="RefreshModelsButton"
+								Content="Refresh Models"
+								Click="RefreshModels_Click" />
+							<Button
+								x:Name="StartOllamaButton"
+								Content="Start Ollama"
+								Click="StartOllama_Click" />
+							<Button
+								x:Name="CancelOllamaButton"
+								Content="Cancel"
+								Visibility="Collapsed"
+								Click="CancelOllama_Click" />
+							<Button
+								x:Name="OpenOllamaInBrowserButton"
+								Content="Open in Browser"
+								Click="OpenOllamaInBrowser_Click" />
+							<Button
+								x:Name="CopyOllamaEndpointButton"
+								Click="CopyOllamaEndpoint_Click">
+								<StackPanel Orientation="Horizontal" Spacing="4">
+									<FontIcon FontSize="14" Glyph="&#xE8C8;" />
+									<TextBlock Text="Copy Endpoint" />
+								</StackPanel>
+							</Button>
+						</StackPanel>
 
 					<TextBlock
 					                   x:Name="OllamaStatusText"
