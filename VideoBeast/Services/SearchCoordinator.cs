@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,13 +25,16 @@ public sealed class SearchCoordinator
 
     private readonly PlaybackCoordinator _playback;
     private readonly LibrarySearchService _searchService;
+    private readonly ILibraryAutocompleteService _autocompleteService;
     private readonly ActionRouter _actionRouter;
 
     private StorageFile? _searchSelectedFile;
+    private LibrarySuggestion? _searchSelectedSuggestion;
     private CancellationTokenSource? _cts;
     private CancellationTokenSource? _aiCts;
     private string? _pendingAiCommand;
     private bool _isInAiMode;
+    private bool _isInPlayCommandMode;
     private bool? _cachedAvailability;
     private DateTime _availabilityCacheTime;
     private static readonly TimeSpan AvailabilityCacheDuration = TimeSpan.FromSeconds(3);
@@ -46,6 +50,7 @@ public sealed class SearchCoordinator
         Action<StorageFile> onFileChosen,
         PlaybackCoordinator playback,
         LibrarySearchService searchService,
+        ILibraryAutocompleteService autocompleteService,
         ActionRouter actionRouter,
         Func<Microsoft.UI.Xaml.XamlRoot> getXamlRoot,
         Func<Type, object?, bool> navigateToPage,
@@ -61,6 +66,7 @@ public sealed class SearchCoordinator
 
         _playback = playback ?? throw new ArgumentNullException(nameof(playback));
         _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
+        _autocompleteService = autocompleteService ?? throw new ArgumentNullException(nameof(autocompleteService));
         _actionRouter = actionRouter ?? throw new ArgumentNullException(nameof(actionRouter));
 
         InitializeAiServices();
@@ -97,8 +103,10 @@ public sealed class SearchCoordinator
     public void Reset()
     {
         _searchSelectedFile = null;
+        _searchSelectedSuggestion = null;
         _pendingAiCommand = null;
         _isInAiMode = false;
+        _isInPlayCommandMode = false;
         _cts?.Cancel();
         _cts = null;
         _aiCts?.Cancel();
@@ -111,7 +119,9 @@ public sealed class SearchCoordinator
             return;
 
         _searchSelectedFile = null;
+        _searchSelectedSuggestion = null;
         _pendingAiCommand = null;
+        _isInPlayCommandMode = false;
 
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
@@ -122,6 +132,43 @@ public sealed class SearchCoordinator
         if (q.StartsWith(">"))
         {
             var command = q.Substring(1).Trim();
+            
+            // Check for >play command with argument
+            if (q.StartsWith(">play ", StringComparison.OrdinalIgnoreCase) && q.Length > 6)
+            {
+                var arg = q.Substring(6);
+                if (arg.Length >= 2)
+                {
+                    var playLibrary = _getLibraryFolder();
+                    if (playLibrary is null)
+                    {
+                        sender.ItemsSource = null;
+                        return;
+                    }
+
+                    try
+                    {
+                        var allSuggestions = await _autocompleteService.GetSuggestionsAsync(arg, maxResults: 8, ct);
+                        if (ct.IsCancellationRequested) return;
+
+                        var videoSuggestions = allSuggestions.Where(s => s.Kind == SuggestionKind.Video).ToList();
+                        sender.ItemsSource = videoSuggestions;
+                        _isInPlayCommandMode = true;
+                    }
+                    catch (OperationCanceledException) { }
+                    catch
+                    {
+                        sender.ItemsSource = null;
+                    }
+                    return;
+                }
+                else
+                {
+                    sender.ItemsSource = null;
+                    _isInPlayCommandMode = true;
+                    return;
+                }
+            }
             
             if (!_isInAiMode)
             {
@@ -181,11 +228,9 @@ public sealed class SearchCoordinator
             return;
         }
 
-        var scope = _getSelectedFolder() ?? library;
-
         try
         {
-            var results = await _searchService.SearchMp4Async(scope,q,10,ct);
+            var results = await _autocompleteService.GetSuggestionsAsync(q, maxResults: 8, ct);
             if (ct.IsCancellationRequested) return;
 
             sender.ItemsSource = results;
@@ -208,7 +253,20 @@ public sealed class SearchCoordinator
             return;
         }
 
-        if (args.SelectedItem is LibrarySearchService.SearchSuggestion s)
+        if (args.SelectedItem is LibrarySuggestion suggestion)
+        {
+            _searchSelectedSuggestion = suggestion;
+            
+            if (_isInPlayCommandMode)
+            {
+                sender.Text = $">play {suggestion.DisplayText}";
+            }
+            else
+            {
+                sender.Text = suggestion.DisplayText;
+            }
+        }
+        else if (args.SelectedItem is LibrarySearchService.SearchSuggestion s)
         {
             _searchSelectedFile = s.File;
             sender.Text = s.DisplayText;
@@ -221,6 +279,14 @@ public sealed class SearchCoordinator
         
         if (q.StartsWith(">"))
         {
+            // Handle >play command with cached suggestion
+            if (q.StartsWith(">play ", StringComparison.OrdinalIgnoreCase) && _searchSelectedSuggestion != null)
+            {
+                await HandlePlayCommandWithSuggestionAsync(_searchSelectedSuggestion);
+                sender.Text = string.Empty;
+                return;
+            }
+            
             var settings = OllamaSettingsStore.Load();
             
             if (!settings.Enabled || string.IsNullOrWhiteSpace(settings.DefaultModel))
@@ -262,10 +328,23 @@ public sealed class SearchCoordinator
             return;
         }
 
+        // Handle library mode suggestions
+        LibrarySuggestion? suggestion = _searchSelectedSuggestion;
+
+        if (suggestion is null && args.ChosenSuggestion is LibrarySuggestion chosen)
+            suggestion = chosen;
+
+        if (suggestion is not null)
+        {
+            await HandleLibrarySuggestionAsync(suggestion);
+            return;
+        }
+
+        // Fallback to legacy search service support
         StorageFile? file = _searchSelectedFile;
 
-        if (file is null && args.ChosenSuggestion is LibrarySearchService.SearchSuggestion chosen)
-            file = chosen.File;
+        if (file is null && args.ChosenSuggestion is LibrarySearchService.SearchSuggestion legacyChosen)
+            file = legacyChosen.File;
 
         if (file is null)
             return;
@@ -274,6 +353,77 @@ public sealed class SearchCoordinator
 
         var settings2 = _getPlayerSettings();
         await _playback.RequestPlayAsync(file,settings2);
+    }
+
+    private async Task HandleLibrarySuggestionAsync(LibrarySuggestion suggestion)
+    {
+        try
+        {
+            if (suggestion.Kind == SuggestionKind.Folder)
+            {
+                var folder = await StorageFolder.GetFolderFromPathAsync(suggestion.FullPath);
+                
+                // Set the selected folder via LibraryFolderService
+                var currentSelected = _getSelectedFolder();
+                if (currentSelected?.Path != folder.Path)
+                {
+                    // Navigate to FolderVideosPage with the folder
+                    _navigateToPage(typeof(VideoBeast.Pages.FolderVideosPage), folder);
+                }
+            }
+            else if (suggestion.Kind == SuggestionKind.Video)
+            {
+                var file = await StorageFile.GetFileFromPathAsync(suggestion.FullPath);
+                
+                _onFileChosen(file);
+                
+                var settings = _getPlayerSettings();
+                await _playback.RequestPlayAsync(file, settings);
+            }
+        }
+        catch (System.IO.FileNotFoundException)
+        {
+            _showStatus($"Path not found: {suggestion.DisplayText}", InfoBarSeverity.Warning);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _showStatus($"Access denied: {suggestion.DisplayText}", InfoBarSeverity.Warning);
+        }
+        catch (Exception ex)
+        {
+            _showStatus($"Error opening {suggestion.DisplayText}: {ex.Message}", InfoBarSeverity.Error);
+        }
+    }
+
+    private async Task HandlePlayCommandWithSuggestionAsync(LibrarySuggestion suggestion)
+    {
+        try
+        {
+            if (suggestion.Kind != SuggestionKind.Video)
+            {
+                _showStatus("Selected item is not a video file", InfoBarSeverity.Warning);
+                return;
+            }
+
+            var file = await StorageFile.GetFileFromPathAsync(suggestion.FullPath);
+            
+            _onFileChosen(file);
+            
+            var settings = _getPlayerSettings();
+            await _playback.RequestPlayAsync(file, settings);
+        }
+        catch (System.IO.FileNotFoundException)
+        {
+            _showStatus($"Video not found: {suggestion.DisplayText}", InfoBarSeverity.Warning);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _showStatus($"Access denied: {suggestion.DisplayText}", InfoBarSeverity.Warning);
+        }
+        catch (Exception ex)
+        {
+            _showStatus($"Error playing {suggestion.DisplayText}: {ex.Message}", InfoBarSeverity.Error);
+        }
     }
 
     private async Task ExecuteAiCommandAsync(string command, CancellationToken ct)

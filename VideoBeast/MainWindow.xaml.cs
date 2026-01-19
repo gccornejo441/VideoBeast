@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.UI;
@@ -26,11 +27,13 @@ public sealed partial class MainWindow : Window
     public static MainWindow? Instance { get; private set; }
 
     private readonly LibraryFolderService _folderService = new();
-    private readonly LibraryImportService _importService = new();
+    private readonly LibraryImportService _importService;
     private readonly PlaybackCoordinator _playback;
     private readonly LibraryGuardService _guard;
     private readonly SearchCoordinator _search;
     private readonly ActionRouter _actions;
+    private readonly LibraryIndexBuilder _indexBuilder = new();
+    private readonly LibraryAutocompleteService _autocompleteService;
 
     private StorageFile? _selectedFile;
     private PlayerSettings _playerSettings = new();
@@ -61,6 +64,11 @@ public sealed partial class MainWindow : Window
         _actions.Register("action:delete",DeleteSelectedAsync);
         _actions.Register("action:openFolder",OpenFolderAsync);
 
+        _autocompleteService = new LibraryAutocompleteService(_folderService, _indexBuilder);
+
+        _importService = new LibraryImportService(
+            onLibraryChanged: () => _ = _autocompleteService.RequestRebuildAsync(CancellationToken.None));
+
         var searchService = new LibrarySearchService();
         _search = new SearchCoordinator(
             getLibraryFolder: () => _folderService.LibraryFolder,
@@ -69,6 +77,7 @@ public sealed partial class MainWindow : Window
             onFileChosen: file => _selectedFile = file,
             playback: _playback,
             searchService: searchService,
+            autocompleteService: _autocompleteService,
             actionRouter: _actions,
             getXamlRoot: () => RootGrid.XamlRoot,
             navigateToPage: (type, param) => Shell.Frame.Navigate(type, param),
@@ -115,7 +124,8 @@ public sealed partial class MainWindow : Window
             {
                 if (_selectedFile?.Path == deletedPath)
                     _selectedFile = null;
-            });
+            },
+            onLibraryChanged: () => _ = _autocompleteService.RequestRebuildAsync(CancellationToken.None));
 
         _navTreeBuilder = new LibraryTreeBuilder(
             fileFlyoutFactory: (file,item) => CreateFileContextFlyout(file,item),
@@ -246,6 +256,13 @@ public sealed partial class MainWindow : Window
     private async Task InitializeLibraryAsync()
     {
         await _folderService.RestoreAsync();
+        
+        // Build autocomplete index if library folder exists
+        if (_folderService.LibraryFolder is not null)
+        {
+            _ = _autocompleteService.EnsureIndexAsync(CancellationToken.None);
+        }
+
         await RebuildNavMenuAsync();
 
         _playback.UpdatePlayerPageUi(
@@ -476,6 +493,9 @@ public sealed partial class MainWindow : Window
         if (folder is null) return;
 
         _selectedFile = null;
+
+        // Rebuild autocomplete index for new library folder
+        _ = _autocompleteService.EnsureIndexAsync(CancellationToken.None);
 
         await RebuildNavMenuAsync();
 

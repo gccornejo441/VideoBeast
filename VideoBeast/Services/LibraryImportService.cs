@@ -18,6 +18,13 @@ public sealed class LibraryImportService
 {
     public sealed record ImportResult(int ImportedCount,string Message);
 
+    private readonly Action? _onLibraryChanged;
+
+    public LibraryImportService(Action? onLibraryChanged = null)
+    {
+        _onLibraryChanged = onLibraryChanged;
+    }
+
     public async Task<ImportResult> ImportWithPickerAsync(
         Window window,
         StorageFolder destination)
@@ -45,6 +52,9 @@ public sealed class LibraryImportService
 
         if (imported == 0)
             return new ImportResult(0,"No .mp4 files were selected.");
+
+        if (imported > 0)
+            _onLibraryChanged?.Invoke();
 
         return new ImportResult(imported,$"Imported {imported} video(s).");
     }
@@ -81,6 +91,9 @@ public sealed class LibraryImportService
             await f.CopyAsync(destination,f.Name,NameCollisionOption.GenerateUniqueName);
             imported++;
         }
+
+        if (imported > 0)
+            _onLibraryChanged?.Invoke();
 
         return new ImportResult(imported,$"Imported {imported} video(s) via drag and drop.");
     }

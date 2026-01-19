@@ -19,19 +19,22 @@ public sealed class LibraryFileActions
     private readonly Func<Task> _rebuildNavMenuAsync;
     private readonly Func<string,Task> _stopPlaybackIfPlayingAsync;
     private readonly Action<string>? _onDeletedPath;
+    private readonly Action? _onLibraryChanged;
 
     public LibraryFileActions(
         Func<XamlRoot?> getXamlRoot,
         Func<Task<bool>> ensureLibraryFolderAsync,
         Func<Task> rebuildNavMenuAsync,
         Func<string,Task> stopPlaybackIfPlayingAsync,
-        Action<string>? onDeletedPath = null)
+        Action<string>? onDeletedPath = null,
+        Action? onLibraryChanged = null)
     {
         _getXamlRoot = getXamlRoot;
         _ensureLibraryFolderAsync = ensureLibraryFolderAsync;
         _rebuildNavMenuAsync = rebuildNavMenuAsync;
         _stopPlaybackIfPlayingAsync = stopPlaybackIfPlayingAsync;
         _onDeletedPath = onDeletedPath;
+        _onLibraryChanged = onLibraryChanged;
     }
 
     public async Task ShowInExplorerAsync(StorageFile file)
@@ -105,6 +108,8 @@ public sealed class LibraryFileActions
         {
             await file.RenameAsync(newName,NameCollisionOption.FailIfExists);
 
+            _onLibraryChanged?.Invoke();
+
             await _rebuildNavMenuAsync().ConfigureAwait(true);
         }
         catch { }
@@ -130,6 +135,7 @@ public sealed class LibraryFileActions
             await file.DeleteAsync(StorageDeleteOption.Default);
 
             _onDeletedPath?.Invoke(targetPath);
+            _onLibraryChanged?.Invoke();
 
             await _rebuildNavMenuAsync().ConfigureAwait(true);
         }
